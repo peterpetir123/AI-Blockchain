@@ -1,0 +1,12 @@
+{
+  "name": "ai-shard-miner",
+  "version": "0.1.0",
+  "private": true,
+  "bin": { "ai-shard-miner": "mine.js" },
+  "scripts": {
+    "selftest": "node mine.js --selftest"
+  },
+  "dependencies": {
+    "ethers": "^6.13.0"
+  }
+}
