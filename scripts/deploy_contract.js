@@ -5,7 +5,7 @@ async function main() {
   const net = await ethers.provider.getNetwork();
   const balance = await ethers.provider.getBalance(deployer.address);
 
-  const nativeSymbol = Number(net.chainId) === 204 ? "BNB" : "ETH";
+  const nativeSymbol = Number(net.chainId) === 5611 ? "tBNB" : "BNB";
 
   console.log("Jaringan    :", net.name, `(chainId ${net.chainId})`);
   console.log("Deployer    :", deployer.address);
@@ -13,7 +13,7 @@ async function main() {
 
   if (balance === 0n) {
     console.error(
-      "\nSaldo 0. Isi BNB ke alamat di atas (opBNB pakai BNB sebagai gas, bukan ETH)."
+      `\nSaldo 0. Isi ${nativeSymbol} ke alamat di atas untuk biaya gas.`
     );
     process.exit(1);
   }

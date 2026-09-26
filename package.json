@@ -6,6 +6,7 @@
     "compile": "hardhat compile",
     "test": "hardhat test",
     "deploy": "hardhat run scripts/deploy_contract.js --network opbnb",
+    "deploy:testnet": "hardhat run scripts/deploy_contract.js --network opbnbTestnet",
     "add-shards": "hardhat run scripts/add_shards.js --network opbnb",
     "messages": "node scripts/read_messages.js"
   },

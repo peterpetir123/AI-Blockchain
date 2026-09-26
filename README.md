@@ -1,10 +1,16 @@
 # AI Shard Unlock Agent
 
-Agent AI yang hidup **sepenuhnya on-chain**. Modelnya dipecah jadi shard;
-tiap shard terbuka lewat proof-of-work, dan saat terbuka contract memancarkan
-pesan AI permanen yang bisa dibaca siapa pun dari event log blockchain.
+Prototipe contract shard-unlock berbasis proof-of-work. Saat shard dibuka,
+contract memancarkan pesan yang dapat dibaca publik dari event log. Ini belum
+menjalankan neural network; model AI dan node komunitas belum diintegrasikan.
 
-Jaringan: **opBNB mainnet** (chainId 204, gas ~0.001 gwei).
+Target jaringan: **opBNB mainnet** (chainId 204). Contract belum dideploy.
+
+## Project documents
+
+- [License](LICENSE) — MIT.
+- [Contributing](CONTRIBUTING.md) — setup test dan panduan kontribusi.
+- [Security](SECURITY.md) — penanganan secret dan pelaporan kerentanan.
 
 ## Alur
 
@@ -40,6 +46,16 @@ cp .env.example .env      # isi PRIVATE_KEY (wallet ber-BNB), PINATA_JWT
 npx hardhat test          # 8 test harus lulus
 ```
 
+## Deploy percobaan ke opBNB testnet
+
+Gunakan wallet khusus testnet yang berbeda dari wallet mainnet. Isi `TESTNET_PRIVATE_KEY` di `.env`, lalu kirim tBNB faucet ke alamat wallet tersebut. Deploy percobaan dengan:
+
+```bash
+npm run deploy:testnet
+```
+
+Testnet opBNB memakai chain ID `5611`; mainnet memakai `204`. Jangan masukkan private key ke repository. `deployment.json` menyimpan hasil deploy lokal dan di-ignore Git.
+
 ## Alur kerja
 
 ```bash
@@ -54,7 +70,8 @@ npx hardhat run scripts/add_shards.js --network opbnb
 
 # 4. Komunitas mining
 cd miner && npm install
-PRIVATE_KEY=0x... node mine.js --contract 0xCONTRACT
+export PRIVATE_KEY=<private-key-miner-lokal>
+node mine.js --contract <CONTRACT_ADDRESS>
 ```
 
 ## Aturan proof
