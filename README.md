@@ -1,8 +1,9 @@
 # AI Shard Unlock Agent
 
-Prototipe contract shard-unlock berbasis proof-of-work. Saat shard dibuka,
-contract memancarkan pesan yang dapat dibaca publik dari event log. Ini belum
-menjalankan neural network; model AI dan node komunitas belum diintegrasikan.
+Prototipe jaringan AI komunitas. `AIShardUnlock` menangani tahap unlock naratif,
+sedangkan `ModelRegistry` mendaftarkan satu file model utuh melalui CID dan
+hash. Neural network berjalan di node komunitas; blockchain menyimpan versi
+model dan hash hasil inference, bukan bobot atau inference-nya.
 
 Target jaringan: **opBNB mainnet** (chainId 204). Contract belum dideploy.
 
@@ -28,14 +29,51 @@ Tidak ada server, worker, maupun bot. Satu-satunya output adalah event on-chain.
 
 ```
 ai-agent/
-├── contracts/AIShardUnlock.sol   # contract inti
-├── test/                         # unit + integrasi miner<->contract
+├── contracts/AIShardUnlock.sol   # unlock naratif dan event pesan
+├── contracts/ModelRegistry.sol   # versi model + catatan inference
+├── test/                         # unit contract + integrasi miner
 ├── scripts/
 │   ├── deploy_contract.js        # deploy + cetak address & topic hash
 │   ├── add_shards.js             # registrasi shard dari manifest.json
 │   └── shard_pipeline.py         # split file -> sha256 -> IPFS -> manifest.json
 ├── miner/                        # miner publik (bagikan ke komunitas)
+├── node/                         # runner model GGUF lokal
 └── hardhat.config.js
+```
+
+## Model dan inference
+
+Model Qwen GGUF disimpan sebagai satu file di IPFS/storage. Contract hanya
+mencatat CID, hash, format, quantization, dan runtime. Node komunitas mengunduh
+file, memverifikasi hash, lalu menjalankan model melalui `llama.cpp`.
+
+Urutannya:
+
+```text
+model GGUF → IPFS → ModelRegistry → node komunitas → inference → hash dicatat
+```
+
+`InferenceRecorded` membuktikan bahwa sebuah node mengirim hash pada versi
+model aktif; event tersebut **bukan bukti kriptografis** bahwa inference benar.
+Verifikasi multi-node/evaluator akan ditambahkan pada tahap berikutnya.
+
+### Manifest dan registrasi model
+
+Setelah model diunggah dan dipin di IPFS, salin `model/manifest.example.json`
+menjadi `model/manifest.json`, lalu isi CID, SHA-256 file, lisensi, sumber, dan
+versi runtime yang benar. File manifest lokal di-ignore Git.
+
+Setelah registry dideploy dan tersimpan di `model-registry-deployment.json`:
+
+```bash
+npm run register:model:testnet
+```
+
+Registrasi tidak otomatis mengaktifkan model. Setelah metadata/CID/hash ditinjau,
+aktifkan versi tersebut dengan:
+
+```bash
+ACTIVATE_MODEL=true npm run register:model:testnet
 ```
 
 ## Setup
@@ -46,15 +84,21 @@ cp .env.example .env      # isi PRIVATE_KEY (wallet ber-BNB), PINATA_JWT
 npx hardhat test          # 8 test harus lulus
 ```
 
-## Deploy percobaan ke opBNB testnet
+## Deploy percobaan ke BNB Smart Chain Testnet
 
-Gunakan wallet khusus testnet yang berbeda dari wallet mainnet. Isi `TESTNET_PRIVATE_KEY` di `.env`, lalu kirim tBNB faucet ke alamat wallet tersebut. Deploy percobaan dengan:
+Gunakan wallet khusus testnet yang berbeda dari wallet mainnet. Isi `TESTNET_PRIVATE_KEY` di `.env`, lalu kirim tBNB dari faucet BNB Smart Chain Testnet ke alamat wallet tersebut. Deploy percobaan dengan:
 
 ```bash
 npm run deploy:testnet
 ```
 
-Testnet opBNB memakai chain ID `5611`; mainnet memakai `204`. Jangan masukkan private key ke repository. `deployment.json` menyimpan hasil deploy lokal dan di-ignore Git.
+BNB Smart Chain Testnet memakai chain ID `97`; opBNB mainnet memakai `204`. Jangan masukkan private key ke repository. `deployment.json` menyimpan hasil deploy lokal dan di-ignore Git.
+
+Deploy registry model ke testnet:
+
+```bash
+npm run deploy:registry:testnet
+```
 
 ## Alur kerja
 

@@ -6,7 +6,11 @@
     "compile": "hardhat compile",
     "test": "hardhat test",
     "deploy": "hardhat run scripts/deploy_contract.js --network opbnb",
-    "deploy:testnet": "hardhat run scripts/deploy_contract.js --network opbnbTestnet",
+    "deploy:testnet": "hardhat run scripts/deploy_contract.js --network bscTestnet",
+    "deploy:registry:testnet": "hardhat run scripts/deploy_model_registry.js --network bscTestnet",
+    "register:model:testnet": "hardhat run scripts/register_model.js --network bscTestnet",
+    "node:inference": "node node/run_registry_inference.js",
+    "wallet:testnet": "hardhat run scripts/check_testnet_wallet.js --network bscTestnet",
     "add-shards": "hardhat run scripts/add_shards.js --network opbnb",
     "messages": "node scripts/read_messages.js"
   },

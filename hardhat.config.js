@@ -9,7 +9,7 @@ if (
   TESTNET_PRIVATE_KEY &&
   MAINNET_PRIVATE_KEY.toLowerCase() === TESTNET_PRIVATE_KEY.toLowerCase()
 ) {
-  throw new Error("Gunakan private key berbeda untuk opBNB mainnet dan testnet.");
+  console.warn("Peringatan: wallet mainnet dan testnet memakai private key yang sama.");
 }
 
 module.exports = {
@@ -25,15 +25,16 @@ module.exports = {
       accounts: MAINNET_PRIVATE_KEY ? [MAINNET_PRIVATE_KEY] : [],
       chainId: 204,
     },
-    opbnbTestnet: {
-      url: process.env.OPBNB_TESTNET_RPC_URL || "https://opbnb-testnet-rpc.bnbchain.org",
+    bscTestnet: {
+      url: process.env.BSC_TESTNET_RPC_URL || "https://data-seed-prebsc-1-s1.bnbchain.org:8545",
       accounts: TESTNET_PRIVATE_KEY ? [TESTNET_PRIVATE_KEY] : [],
-      chainId: 5611,
+      chainId: 97,
     },
   },
   etherscan: {
     apiKey: {
       opbnb: process.env.BSCSCAN_API_KEY || "",
+      bscTestnet: process.env.BSCSCAN_API_KEY || "",
     },
     customChains: [
       {

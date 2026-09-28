@@ -1,0 +1,11 @@
+{
+  "name": "Qwen2.5-0.5B-Instruct",
+  "version": "1.0.0",
+  "cid": "bafyREPLACE_WITH_MODEL_CID",
+  "sha256": "0xREPLACE_WITH_64_HEX_HASHES",
+  "format": "GGUF",
+  "quantization": "Q4_K_M",
+  "runtimeVersion": "llama.cpp-REPLACE_VERSION",
+  "license": "REPLACE_WITH_MODEL_LICENSE",
+  "source": "REPLACE_WITH_OFFICIAL_MODEL_SOURCE"
+}

@@ -8,3 +8,5 @@ coverage.json
 shards/
 manifest.json
 deployment.json
+model-registry-deployment.json
+model/manifest.json

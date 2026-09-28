@@ -5,7 +5,7 @@ async function main() {
   const net = await ethers.provider.getNetwork();
   const balance = await ethers.provider.getBalance(deployer.address);
 
-  const nativeSymbol = Number(net.chainId) === 5611 ? "tBNB" : "BNB";
+  const nativeSymbol = Number(net.chainId) === 97 ? "tBNB" : "BNB";
 
   console.log("Jaringan    :", net.name, `(chainId ${net.chainId})`);
   console.log("Deployer    :", deployer.address);
