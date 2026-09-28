@@ -14,6 +14,7 @@ import hashlib
 import json
 import os
 import sys
+import time
 from pathlib import Path
 
 try:
@@ -49,18 +50,48 @@ def split_file(src: Path, n: int, out_dir: Path) -> list:
     return parts
 
 
-def upload_pinata(path: Path, jwt: str) -> str:
+def upload_pinata(path: Path, jwt: str, attempts: int = 4) -> str:
+    """Upload satu file ke Pinata. Retry karena koneksi lambat sering timeout."""
     if requests is None:
         raise RuntimeError("butuh package 'requests' untuk upload Pinata")
-    with open(path, "rb") as f:
-        r = requests.post(
-            PINATA_URL,
-            headers={"Authorization": f"Bearer {jwt}"},
-            files={"file": (path.name, f, "application/octet-stream")},
-            timeout=120,
-        )
-    r.raise_for_status()
-    return r.json()["IpfsHash"]
+
+    last_err = None
+    for attempt in range(1, attempts + 1):
+        try:
+            with open(path, "rb") as f:
+                r = requests.post(
+                    PINATA_URL,
+                    headers={"Authorization": f"Bearer {jwt}"},
+                    files={"file": (path.name, f, "application/octet-stream")},
+                    # (connect, read) — read besar karena file ~50 MB
+                    timeout=(30, 900),
+                )
+            r.raise_for_status()
+            return r.json()["IpfsHash"]
+        except Exception as e:  # noqa: BLE001 - retry semua error jaringan
+            last_err = e
+            wait = 5 * attempt
+            print(f"  upload gagal (percobaan {attempt}/{attempts}): {e}")
+            print(f"  coba lagi dalam {wait}s...")
+            time.sleep(wait)
+
+    raise RuntimeError(f"upload Pinata gagal setelah {attempts} percobaan: {last_err}")
+
+
+def load_existing_manifest() -> dict:
+    """Baca manifest.json lama (bila ada) untuk melanjutkan upload tanpa mulai dari nol."""
+    p = Path("manifest.json")
+    if not p.exists():
+        return {}
+    try:
+        data = json.loads(p.read_text())
+    except (json.JSONDecodeError, OSError):
+        return {}
+    return {item["shardId"]: item for item in data if "shardId" in item}
+
+
+def save_manifest(manifest: list) -> None:
+    Path("manifest.json").write_text(json.dumps(manifest, indent=2))
 
 
 def main():
@@ -82,13 +113,21 @@ def main():
     parts = split_file(args.model, args.shards, args.out)
     print(f"{args.model} ({args.model.stat().st_size} bytes) -> {len(parts)} shard")
 
+    existing = load_existing_manifest()
+    if existing:
+        print(f"melanjutkan: {sum(1 for i in existing.values() if i.get('cid'))} shard sudah punya CID")
+
     manifest = []
     for i, p in enumerate(parts):
         digest = sha256_file(p)
-        cid = ""
-        if not args.no_upload:
+        prev = existing.get(i, {})
+        cid = prev.get("cid", "")
+
+        if not args.no_upload and not cid:
             cid = upload_pinata(p, jwt)
             print(f"  shard {i}: {p.name} sha256={digest.hex()[:16]}... cid={cid}")
+        elif cid:
+            print(f"  shard {i}: {p.name} sha256={digest.hex()[:16]}... cid={cid} (dilewati, sudah ada)")
         else:
             print(f"  shard {i}: {p.name} sha256={digest.hex()[:16]}... (no upload)")
 
@@ -103,9 +142,10 @@ def main():
                 "message": f"Shard {i} terdeteksi. Kesadaran bertambah.",
             }
         )
+        # simpan tiap shard supaya progres tidak hilang saat upload timeout
+        save_manifest(manifest)
 
-    Path("manifest.json").write_text(json.dumps(manifest, indent=2))
-    print("\nmanifest.json ditulis. Lanjut: npx hardhat run scripts/add_shards.js --network baseSepolia")
+    print("\nmanifest.json ditulis. Lanjut: npx hardhat run scripts/add_shards.js --network opbnb")
 
 
 if __name__ == "__main__":

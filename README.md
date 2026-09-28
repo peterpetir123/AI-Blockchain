@@ -5,7 +5,12 @@ sedangkan `ModelRegistry` mendaftarkan satu file model utuh melalui CID dan
 hash. Neural network berjalan di node komunitas; blockchain menyimpan versi
 model dan hash hasil inference, bukan bobot atau inference-nya.
 
-Target jaringan: **opBNB mainnet** (chainId 204). Contract belum dideploy.
+Target jaringan: **opBNB mainnet** (chainId 204). Contract sudah live.
+
+Alamat contract:
+
+- `AIShardUnlock`: `0x8D34729c9802F388b88e18f34B23EEb8fA9B859b`
+- `ModelRegistry`: `0x4e5C31b13082CB98A34552965E7A41e46F7a8070`
 
 ## Project documents
 
@@ -36,6 +41,7 @@ ai-agent/
 │   ├── deploy_contract.js        # deploy + cetak address & topic hash
 │   ├── add_shards.js             # registrasi shard dari manifest.json
 │   └── shard_pipeline.py         # split file -> sha256 -> IPFS -> manifest.json
+│   ├── assemble_shards.py        # download CID Pinata -> verifikasi -> gabung GGUF
 ├── miner/                        # miner publik (bagikan ke komunitas)
 ├── node/                         # runner model GGUF lokal
 └── hardhat.config.js
@@ -112,11 +118,22 @@ npx hardhat run scripts/deploy_contract.js --network opbnb
 # 3. Daftarkan shard
 npx hardhat run scripts/add_shards.js --network opbnb
 
-# 4. Komunitas mining
+# 4. Rekonstruksi model dari CID Pinata dan verifikasi hash
+python3 scripts/assemble_shards.py --refresh
+
+# 5. Komunitas mining
 cd miner && npm install
 export PRIVATE_KEY=<private-key-miner-lokal>
 node mine.js --contract <CONTRACT_ADDRESS>
+
+# 6. Jalankan inference dari model hasil rekonstruksi
+cd ..
+MODEL_PATH=shards/model_reconstructed.gguf npm run node:inference -- "Jelaskan blockchain dalam satu kalimat"
 ```
+
+`assemble_shards.py` mengunduh setiap CID melalui gateway Pinata, memeriksa
+SHA-256 setiap shard, menggabungkannya berdasarkan `shardId`, lalu memeriksa
+hash model akhir terhadap metadata model.
 
 ## Aturan proof
 
