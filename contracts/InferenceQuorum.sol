@@ -11,6 +11,7 @@ interface IModelRegistryVersion {
 contract InferenceQuorum {
     struct Request {
         uint256 modelVersion;
+        string prompt;
         bytes32 inputHash;
         uint256 quorum;
         uint256 deadline;
@@ -26,6 +27,7 @@ contract InferenceQuorum {
     mapping(uint256 => Request) public requests;
     mapping(uint256 => mapping(address => bytes32)) public submissions;
     mapping(uint256 => mapping(bytes32 => uint256)) public tally;
+    mapping(uint256 => mapping(bytes32 => string)) public outputText;
 
     event RequestCreated(
         uint256 indexed requestId,
@@ -59,11 +61,6 @@ contract InferenceQuorum {
     error QuorumNotReached();
     error NotImplemented();
 
-    modifier onlyOwner() {
-        if (msg.sender != owner) revert NotOwner();
-        _;
-    }
-
     constructor(address modelRegistryAddress) {
         if (modelRegistryAddress == address(0)) revert InvalidRequest();
         owner = msg.sender;
@@ -72,13 +69,15 @@ contract InferenceQuorum {
 
     function createRequest(
         uint256 modelVersion,
-        bytes32 inputHash,
+        string calldata prompt,
         uint256 quorum,
         uint256 deadline
-    ) external onlyOwner returns (uint256) {
+    ) external returns (uint256) {
+        bytes32 inputHash = keccak256(bytes(prompt));
         if (
             modelVersion == 0 ||
             modelVersion != modelRegistry.activeModelVersion() ||
+            bytes(prompt).length == 0 ||
             inputHash == bytes32(0) ||
             quorum == 0 ||
             deadline <= block.timestamp
@@ -87,6 +86,7 @@ contract InferenceQuorum {
         uint256 requestId = ++requestCount;
         requests[requestId] = Request({
             modelVersion: modelVersion,
+            prompt: prompt,
             inputHash: inputHash,
             quorum: quorum,
             deadline: deadline,
@@ -105,7 +105,7 @@ contract InferenceQuorum {
         return requestId;
     }
 
-    function submitOutput(uint256 requestId, bytes32 outputHash) external {
+    function submitOutput(uint256 requestId, string calldata output) external {
         if (requestId == 0 || requestId > requestCount) {
             revert UnknownRequest();
         }
@@ -113,12 +113,16 @@ contract InferenceQuorum {
         if (request.finalized || block.timestamp >= request.deadline) {
             revert RequestClosed();
         }
-        if (outputHash == bytes32(0)) revert InvalidOutput();
+        if (bytes(output).length == 0) revert InvalidOutput();
         if (submissions[requestId][msg.sender] != bytes32(0)) {
             revert AlreadySubmitted();
         }
 
+        bytes32 outputHash = keccak256(bytes(output));
         submissions[requestId][msg.sender] = outputHash;
+        if (bytes(outputText[requestId][outputHash]).length == 0) {
+            outputText[requestId][outputHash] = output;
+        }
         uint256 count = ++tally[requestId][outputHash];
         emit OutputSubmitted(requestId, msg.sender, outputHash);
 

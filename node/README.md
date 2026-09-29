@@ -50,6 +50,37 @@ Node akan memeriksa versi model aktif, CID, dan SHA-256 sebelum menjalankan
 inference. Setelah output dibuat, node mengirim hash prompt dan output melalui
 `InferenceRecorded` ke registry. Isi prompt/jawaban tidak disimpan on-chain.
 
+## Worker node tanpa server
+
+Worker ini hanya membaca blockchain melalui RPC, menjalankan model secara lokal,
+dan mengirim output kembali ke contract. Tidak ada HTTP server atau database.
+
+```bash
+QUORUM_DEPLOYMENT=inference-quorum-deployment.json \
+MODEL_PATH=shards/model_reconstructed.gguf \
+PRIVATE_KEY=0xPRIVATE_KEY_WALLET_NODE_SENDIRI \
+START_BLOCK=BLOCK_SEBELUM_REQUEST \
+POLL_MS=15000 \
+MAX_TOKENS=128 \
+node node/worker_node.js
+```
+
+Worker membaca `RequestCreated` dengan `eth_getLogs` per rentang blok. Setiap
+request yang cocok dengan model aktif dijalankan lokal, lalu output dikirim ke
+`submitOutput`. Wallet node harus memiliki BNB opBNB untuk gas.
+
+Requester membuat permintaan dan mengambil hasil langsung dari blockchain:
+
+```bash
+PRIVATE_KEY=0xPRIVATE_KEY_REQUESTER_SENDIRI \
+POLL_MS=10000 \
+npm run request:inference -- "Jelaskan blockchain dalam satu kalimat"
+```
+
+Requester membayar gas transaksi request dan finalisasi. Prompt dan output
+tersimpan publik on-chain. Atur `INFERENCE_QUORUM` untuk jumlah output identik
+yang harus diterima; default demo adalah `1`.
+
 ### Alur dari shard Pinata
 
 Untuk mensimulasikan node komunitas yang mengambil model dari shard publik:
