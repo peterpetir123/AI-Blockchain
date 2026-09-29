@@ -40,6 +40,7 @@ ai-agent/
 ├── scripts/
 │   ├── deploy_contract.js        # deploy + cetak address & topic hash
 │   ├── add_shards.js             # registrasi shard dari manifest.json
+│   ├── add_demo_shard.js         # tambah satu challenge publik difficulty rendah
 │   └── shard_pipeline.py         # split file -> sha256 -> IPFS -> manifest.json
 │   ├── assemble_shards.py        # download CID Pinata -> verifikasi -> gabung GGUF
 ├── miner/                        # miner publik (bagikan ke komunitas)
@@ -130,6 +131,23 @@ node mine.js --contract <CONTRACT_ADDRESS>
 cd ..
 MODEL_PATH=shards/model_reconstructed.gguf npm run node:inference -- "Jelaskan blockchain dalam satu kalimat"
 ```
+
+### Demo mining publik
+
+Contract demo yang sudah live:
+
+```text
+AIShardUnlock: 0x8D34729c9802F388b88e18f34B23EEb8fA9B859b
+Demo shard   : 9
+Difficulty   : 16
+```
+
+Perintah lengkap untuk peserta ada di [`miner/README.md`](miner/README.md).
+Peserta membutuhkan Node.js, `npm install`, wallet sendiri, dan sedikit BNB
+opBNB untuk gas. Mining dilakukan lokal; hanya transaksi proof yang masuk
+blockchain. Demo ini belum memiliki reward.
+Shard `8` sudah dibuka saat uji end-to-end. Shard `9` adalah challenge publik
+yang sedang tersedia dan masih terkunci.
 
 `assemble_shards.py` mengunduh setiap CID melalui gateway Pinata, memeriksa
 SHA-256 setiap shard, menggabungkannya berdasarkan `shardId`, lalu memeriksa
