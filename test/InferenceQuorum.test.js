@@ -204,9 +204,9 @@ describe("InferenceQuorum finalize", function () {
     expect(request.finalized).to.equal(true);
     expect(request.winningOutput).to.equal(outputHash);
     expect(request.winningCount).to.equal(2n);
-    expect(request.winningMiner).to.equal(secondNode.address);
+    expect(request.winningMiner).to.equal(node.address);
     expect(await quorum.claimable(owner.address)).to.equal(100n);
-    expect(await quorum.claimable(secondNode.address)).to.equal(900n);
+    expect(await quorum.claimable(node.address)).to.equal(900n);
     expect(request.fee).to.equal(0n);
   });
 

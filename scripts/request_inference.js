@@ -13,7 +13,8 @@ const {
 const QUORUM_ABI = [
   "function createRequest(uint256 modelVersion,string prompt,uint256 quorum,uint256 deadline) returns (uint256)",
   "function requestCount() view returns (uint256)",
-  "function requests(uint256) view returns (uint256 modelVersion,string prompt,bytes32 inputHash,uint256 quorum,uint256 deadline,bool finalized,bytes32 winningOutput,uint256 winningCount)",
+  "function requestFee() view returns (uint256)",
+  "function requests(uint256) view returns (uint256 modelVersion,bytes32 inputHash,uint256 quorum,uint256 deadline,address requester,address winningMiner,uint256 fee,bool finalized,bool refunded,bytes32 winningOutput,uint256 winningCount)",
   "function outputText(uint256,bytes32) view returns (string)",
   "function finalize(uint256)",
   "function isVerified(uint256) view returns (bool)",

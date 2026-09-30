@@ -36,6 +36,7 @@ contract InferenceQuorum {
     mapping(uint256 => mapping(address => bytes32)) public submissions;
     mapping(uint256 => mapping(bytes32 => uint256)) public tally;
     mapping(uint256 => mapping(bytes32 => string)) public outputText;
+    mapping(uint256 => mapping(bytes32 => address payable)) public firstOutputMiner;
 
     event RequestCreated(
         uint256 indexed requestId,
@@ -160,6 +161,9 @@ contract InferenceQuorum {
             revert InvalidProof();
         }
         submissions[requestId][msg.sender] = outputHash;
+        if (tally[requestId][outputHash] == 0) {
+            firstOutputMiner[requestId][outputHash] = payable(msg.sender);
+        }
         if (bytes(outputText[requestId][outputHash]).length == 0) {
             outputText[requestId][outputHash] = output;
         }
@@ -170,7 +174,7 @@ contract InferenceQuorum {
             if (request.winningOutput == bytes32(0)) {
                 request.winningOutput = outputHash;
                 request.winningCount = count;
-                request.winningMiner = payable(msg.sender);
+                request.winningMiner = firstOutputMiner[requestId][outputHash];
             }
             emit QuorumReached(requestId, outputHash, count);
         }
@@ -244,6 +248,11 @@ contract InferenceQuorum {
         if (requestId == 0 || requestId > requestCount) return false;
         Request storage request = requests[requestId];
         return request.finalized && request.winningCount >= request.quorum;
+    }
+
+    function getPrompt(uint256 requestId) external view returns (string memory) {
+        if (requestId == 0 || requestId > requestCount) revert UnknownRequest();
+        return requests[requestId].prompt;
     }
 
     function _validClaim(
