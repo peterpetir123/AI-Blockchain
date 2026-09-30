@@ -1,8 +1,8 @@
 {
   "network": "opbnb",
   "chainId": 204,
-  "quorumAddress": "0x855Ff3e2f7eaD8a929A643c40af7E658e035d335",
+  "quorumAddress": "0x3165D784eb2Bb68d40c3350a643AFfC970054239",
   "modelRegistryAddress": "0x4e5C31b13082CB98A34552965E7A41e46F7a8070",
   "deployer": "0xf34BDf93b2574EBEBcE35AcCa1BbFD0482883380",
-  "deployedAt": "2026-09-29T14:37:19.428Z"
+  "deployedAt": "2026-09-30T11:02:40.430Z"
 }

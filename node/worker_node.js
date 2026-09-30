@@ -8,7 +8,7 @@ const { Contract, JsonRpcProvider, Wallet } = require("ethers");
 const ABI = [
   "function requestCount() view returns (uint256)",
   "function modelRegistry() view returns (address)",
-  "function requests(uint256) view returns (uint256 modelVersion, bytes32 inputHash, uint256 quorum, uint256 deadline, address requester, address winningMiner, uint256 fee, bool finalized, bool refunded, bytes32 winningOutput, uint256 winningCount)",
+  "function requests(uint256) view returns (uint256 modelVersion, string prompt, bytes32 inputHash, uint256 quorum, uint256 deadline, address requester, address winningMiner, uint256 fee, bool finalized, bool refunded, bytes32 winningOutput, uint256 winningCount)",
   "function getPrompt(uint256) view returns (string)",
   "function submitOutput(uint256 requestId, string output, uint256 nonce)",
   "event RequestCreated(uint256 indexed requestId, uint256 indexed modelVersion, bytes32 inputHash, uint256 quorum, uint256 deadline)",
