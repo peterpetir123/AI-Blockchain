@@ -19,8 +19,13 @@ function readJson(path) {
 }
 
 function runModel(cli, modelPath, prompt, maxTokens) {
+  // Flag deterministik hanya dikirim bila llama-cli build mendukungnya.
+  // Build minimal (hanya -m/-n/-ngl) memakai greedy decoding dan sudah deterministik.
+  const sampling = [];
+  if (process.env.LLAMA_TEMP !== undefined) sampling.push("--temp", process.env.LLAMA_TEMP);
+  if (process.env.LLAMA_SEED !== undefined) sampling.push("--seed", process.env.LLAMA_SEED);
   return new Promise((resolve, reject) => {
-    const child = spawn(cli, ["-m", modelPath, "-n", String(maxTokens), prompt], {
+    const child = spawn(cli, ["-m", modelPath, "-n", String(maxTokens), ...sampling, prompt], {
       stdio: ["ignore", "pipe", "inherit"],
     });
     let output = "";

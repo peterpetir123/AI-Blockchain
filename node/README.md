@@ -72,6 +72,22 @@ request yang cocok dengan model aktif dijalankan lokal, lalu output dikirim ke
 untuk gas. Jika menjadi miner pemenang, saldo reward dapat diambil dengan
 `claim()`; reward saat ini adalah 90% dari fee request.
 
+### Reward hanya untuk miner pemenang
+
+Model distribusi saat ini meniru PoW Bitcoin: satu miner yang per.output
+pemenang menerima 90% fee. Miner lain yang mengirim output identik tetap
+bertahan gas tanpa reward. Pada uji quorum 2 dengan dua miner terpisah, miner
+kedua tercatat `claimable: 0`.
+
+Agar output beberapa miner dianggap identik, inference harus deterministik.
+Build `llama-cli` minimal yang hanya mendukung `-m/-n/-ngl` memakai greedy
+decoding dan sudah deterministik. Jika memakai build llama.cpp lengkap dengan
+sampling acak, atur flag deterministik agar kuorum dapat tercapai:
+
+```bash
+LLAMA_TEMP=0 LLAMA_SEED=1 node node/worker_node.js
+```
+
 Requester membuat permintaan dan mengambil hasil langsung dari blockchain:
 
 ```bash
