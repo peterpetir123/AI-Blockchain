@@ -6,6 +6,7 @@ async function main() {
   const network = await ethers.provider.getNetwork();
   const balance = await ethers.provider.getBalance(deployer.address);
   const registryAddress = process.env.MODEL_REGISTRY_ADDRESS;
+  const requestFee = process.env.REQUEST_FEE_WEI || "0";
 
   if (!registryAddress || !ethers.isAddress(registryAddress)) {
     throw new Error(
@@ -23,7 +24,7 @@ async function main() {
   }
 
   const factory = await ethers.getContractFactory("InferenceQuorum");
-  const quorum = await factory.deploy(registryAddress);
+  const quorum = await factory.deploy(registryAddress, requestFee);
   await quorum.waitForDeployment();
   const quorumAddress = await quorum.getAddress();
 

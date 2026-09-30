@@ -43,6 +43,7 @@ async function main() {
   const registry = new Contract(deployment.modelRegistryAddress, REGISTRY_ABI, provider);
 
   const quorum = BigInt(process.env.INFERENCE_QUORUM || "1");
+  const requestFee = BigInt(process.env.REQUEST_FEE_WEI || (await quorumContract.requestFee()));
   const timeoutSeconds = BigInt(process.env.REQUEST_TIMEOUT_SECONDS || "1800");
   const pollMs = Number(process.env.POLL_MS || "10000");
   if (quorum < 1n || timeoutSeconds < 1n || !Number.isSafeInteger(pollMs) || pollMs < 1000) {
@@ -60,7 +61,7 @@ async function main() {
   console.log(`Quorum    : ${quorum}`);
   console.log(`Input hash: ${inputHash}`);
 
-  const tx = await quorumContract.createRequest(modelVersion, prompt, quorum, deadline);
+  const tx = await quorumContract.createRequest(modelVersion, prompt, quorum, deadline, { value: requestFee });
   console.log(`Create tx : ${tx.hash}`);
   const receipt = await tx.wait();
   const event = receipt.logs

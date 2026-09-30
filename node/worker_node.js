@@ -9,7 +9,7 @@ const ABI = [
   "function requestCount() view returns (uint256)",
   "function modelRegistry() view returns (address)",
   "function requests(uint256) view returns (uint256 modelVersion, string prompt, bytes32 inputHash, uint256 quorum, uint256 deadline, bool finalized, bytes32 winningOutput, uint256 winningCount)",
-  "function submitOutput(uint256 requestId, string output)",
+  "function submitOutput(uint256 requestId, string output, uint256 nonce)",
   "event RequestCreated(uint256 indexed requestId, uint256 indexed modelVersion, bytes32 inputHash, uint256 quorum, uint256 deadline)",
 ];
 
@@ -37,6 +37,19 @@ function numberEnv(name, fallback) {
   const value = Number(process.env[name] ?? fallback);
   if (!Number.isInteger(value) || value < 0) throw new Error(`${name} tidak valid`);
   return value;
+}
+
+function findClaimNonce(requestId, output, miner) {
+  const { solidityPackedKeccak256, keccak256, toUtf8Bytes } = require("ethers");
+  const outputHash = keccak256(toUtf8Bytes(output));
+  const target = (1n << 256n) - 1n >> 16n;
+  for (let nonce = 0n; ; nonce++) {
+    const proof = solidityPackedKeccak256(
+      ["uint256", "bytes32", "address", "uint256"],
+      [requestId, outputHash, miner, nonce]
+    );
+    if (BigInt(proof) < target) return nonce;
+  }
 }
 
 async function main() {
@@ -88,7 +101,9 @@ async function main() {
           request.prompt,
           maxTokens
         );
-        const tx = await contract.submitOutput(requestId, output);
+        const nonce = findClaimNonce(requestId, output, wallet.address);
+        console.log(`request ${requestId}: nonce ${nonce}`);
+        const tx = await contract.submitOutput(requestId, output, nonce);
         console.log(`request ${requestId}: tx ${tx.hash}`);
         await tx.wait();
         console.log(`request ${requestId}: output terkirim`);

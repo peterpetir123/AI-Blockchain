@@ -1,6 +1,18 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
+function findClaimNonce(requestId, output, miner) {
+  const outputHash = ethers.keccak256(ethers.toUtf8Bytes(output));
+  const target = (ethers.MaxUint256 >> 16n);
+  for (let nonce = 0n; ; nonce++) {
+    const proof = ethers.solidityPackedKeccak256(
+      ["uint256", "bytes32", "address", "uint256"],
+      [requestId, outputHash, miner, nonce]
+    );
+    if (BigInt(proof) < target) return nonce;
+  }
+}
+
 const MODEL = {
   cid: "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
   hash: ethers.keccak256(ethers.toUtf8Bytes("model-file")),
@@ -26,6 +38,7 @@ async function deploy() {
 
   const quorum = await ethers.deployContract("InferenceQuorum", [
     await registry.getAddress(),
+    1000n,
   ]);
   await quorum.waitForDeployment();
   return { owner, node, other, registry, quorum };
@@ -38,7 +51,7 @@ describe("InferenceQuorum createRequest", function () {
     const inputHash = ethers.keccak256(ethers.toUtf8Bytes(prompt));
     const deadline = (await ethers.provider.getBlock("latest")).timestamp + 3600;
 
-    await expect(quorum.createRequest(1, prompt, 2, deadline))
+    await expect(quorum.createRequest(1, prompt, 2, deadline, { value: 1000n }))
       .to.emit(quorum, "RequestCreated")
       .withArgs(1, 1, inputHash, 2, deadline);
 
@@ -56,7 +69,7 @@ describe("InferenceQuorum createRequest", function () {
     const deadline = (await ethers.provider.getBlock("latest")).timestamp + 3600;
     const prompt = "prompt";
 
-    await expect(quorum.connect(node).createRequest(1, prompt, 2, deadline))
+    await expect(quorum.connect(node).createRequest(1, prompt, 2, deadline, { value: 1000n }))
       .to.emit(quorum, "RequestCreated")
       .withArgs(1, 1, ethers.keccak256(ethers.toUtf8Bytes(prompt)), 2, deadline);
   });
@@ -67,16 +80,16 @@ describe("InferenceQuorum createRequest", function () {
     const future = (await ethers.provider.getBlock("latest")).timestamp + 3600;
 
     await expect(
-      quorum.createRequest(2, prompt, 2, future)
+      quorum.createRequest(2, prompt, 2, future, { value: 1000n })
     ).to.be.revertedWithCustomError(quorum, "InvalidRequest");
     await expect(
-      quorum.createRequest(1, "", 2, future)
+      quorum.createRequest(1, "", 2, future, { value: 1000n })
     ).to.be.revertedWithCustomError(quorum, "InvalidRequest");
     await expect(
-      quorum.createRequest(1, prompt, 0, future)
+      quorum.createRequest(1, prompt, 0, future, { value: 1000n })
     ).to.be.revertedWithCustomError(quorum, "InvalidRequest");
     await expect(
-      quorum.createRequest(1, prompt, 2, 1)
+      quorum.createRequest(1, prompt, 2, 1, { value: 1000n })
     ).to.be.revertedWithCustomError(quorum, "InvalidRequest");
   });
 });
@@ -86,7 +99,7 @@ describe("InferenceQuorum submitOutput", function () {
     const deployed = await deploy();
     const prompt = "prompt";
     const deadline = (await ethers.provider.getBlock("latest")).timestamp + 3600;
-    await deployed.quorum.createRequest(1, prompt, quorum, deadline);
+    await deployed.quorum.createRequest(1, prompt, quorum, deadline, { value: 1000n });
     return { ...deployed, deadline };
   }
 
@@ -95,7 +108,8 @@ describe("InferenceQuorum submitOutput", function () {
     const output = "Blockchain adalah buku besar digital.";
     const outputHash = ethers.keccak256(ethers.toUtf8Bytes(output));
 
-    await expect(quorum.connect(node).submitOutput(1, output))
+    const nonce = findClaimNonce(1, output, node.address);
+    await expect(quorum.connect(node).submitOutput(1, output, nonce))
       .to.emit(quorum, "OutputSubmitted")
       .withArgs(1, node.address, outputHash);
 
@@ -109,7 +123,8 @@ describe("InferenceQuorum submitOutput", function () {
     const output = "answer";
     const outputHash = ethers.keccak256(ethers.toUtf8Bytes(output));
 
-    await expect(quorum.connect(node).submitOutput(1, output))
+    const nonce = findClaimNonce(1, output, node.address);
+    await expect(quorum.connect(node).submitOutput(1, output, nonce))
       .to.emit(quorum, "QuorumReached")
       .withArgs(1, outputHash, 1);
   });
@@ -118,22 +133,30 @@ describe("InferenceQuorum submitOutput", function () {
     const { quorum, node, owner, deadline } = await createRequest();
     const output = "answer";
 
-    await quorum.connect(node).submitOutput(1, output);
+    const nonce = findClaimNonce(1, output, node.address);
+    await quorum.connect(node).submitOutput(1, output, nonce);
     await expect(
-      quorum.connect(node).submitOutput(1, output)
+      quorum.connect(node).submitOutput(1, output, nonce)
     ).to.be.revertedWithCustomError(quorum, "AlreadySubmitted");
     await expect(
-      quorum.connect(owner).submitOutput(1, "")
+      quorum.connect(owner).submitOutput(1, "", 0)
     ).to.be.revertedWithCustomError(quorum, "InvalidOutput");
     await expect(
-      quorum.connect(owner).submitOutput(99, output)
+      quorum.connect(owner).submitOutput(99, output, 0)
     ).to.be.revertedWithCustomError(quorum, "UnknownRequest");
 
     await ethers.provider.send("evm_setNextBlockTimestamp", [deadline]);
     await ethers.provider.send("evm_mine");
     await expect(
-      quorum.connect(owner).submitOutput(1, output)
+      quorum.connect(owner).submitOutput(1, output, 0)
     ).to.be.revertedWithCustomError(quorum, "RequestClosed");
+  });
+
+  it("rejects a claim with an invalid bound nonce", async function () {
+    const { quorum, node } = await createRequest(1);
+    await expect(
+      quorum.connect(node).submitOutput(1, "answer", 0)
+    ).to.be.revertedWithCustomError(quorum, "InvalidProof");
   });
 });
 
@@ -143,9 +166,10 @@ describe("InferenceQuorum finalize", function () {
     const prompt = "Jelaskan blockchain.";
     const deadline = (await ethers.provider.getBlock("latest")).timestamp + 3600;
 
-    await quorum.connect(other).createRequest(1, prompt, 1, deadline);
+    await quorum.connect(other).createRequest(1, prompt, 1, deadline, { value: 1000n });
     const output = "Blockchain adalah buku besar terdistribusi.";
-    await quorum.connect(node).submitOutput(1, output);
+    const nonce = findClaimNonce(1, output, node.address);
+    await quorum.connect(node).submitOutput(1, output, nonce);
     await quorum.connect(other).finalize(1);
 
     const request = await quorum.requests(1);
@@ -158,15 +182,17 @@ describe("InferenceQuorum finalize", function () {
       const deployed = await deploy();
       const prompt = "prompt";
       const deadline = (await ethers.provider.getBlock("latest")).timestamp + 3600;
-      await deployed.quorum.createRequest(1, prompt, 2, deadline);
+      await deployed.quorum.createRequest(1, prompt, 2, deadline, { value: 1000n });
       return deployed;
     })();
     const [, , secondNode] = await ethers.getSigners();
     const output = "answer";
     const outputHash = ethers.keccak256(ethers.toUtf8Bytes(output));
 
-    await quorum.connect(node).submitOutput(1, output);
-    await expect(quorum.connect(secondNode).submitOutput(1, output))
+    const nodeNonce = findClaimNonce(1, output, node.address);
+    const secondNonce = findClaimNonce(1, output, secondNode.address);
+    await quorum.connect(node).submitOutput(1, output, nodeNonce);
+    await expect(quorum.connect(secondNode).submitOutput(1, output, secondNonce))
       .to.emit(quorum, "QuorumReached")
       .withArgs(1, outputHash, 2);
     await expect(quorum.connect(owner).finalize(1))
@@ -178,13 +204,17 @@ describe("InferenceQuorum finalize", function () {
     expect(request.finalized).to.equal(true);
     expect(request.winningOutput).to.equal(outputHash);
     expect(request.winningCount).to.equal(2n);
+    expect(request.winningMiner).to.equal(secondNode.address);
+    expect(await quorum.claimable(owner.address)).to.equal(100n);
+    expect(await quorum.claimable(secondNode.address)).to.equal(900n);
+    expect(request.fee).to.equal(0n);
   });
 
   it("cannot finalize before quorum or deadline", async function () {
     const deployed = await deploy();
     const prompt = "prompt";
     const deadline = (await ethers.provider.getBlock("latest")).timestamp + 3600;
-    await deployed.quorum.createRequest(1, prompt, 2, deadline);
+      await deployed.quorum.createRequest(1, prompt, 2, deadline, { value: 1000n });
 
     await expect(deployed.quorum.finalize(1))
       .to.be.revertedWithCustomError(deployed.quorum, "RequestClosed");
@@ -200,11 +230,61 @@ describe("InferenceQuorum finalize", function () {
     const deployed = await deploy();
     const prompt = "prompt";
     const deadline = (await ethers.provider.getBlock("latest")).timestamp + 3600;
-    await deployed.quorum.createRequest(1, prompt, 1, deadline);
+    await deployed.quorum.createRequest(1, prompt, 1, deadline, { value: 1000n });
     const output = "answer";
-    await deployed.quorum.connect(deployed.node).submitOutput(1, output);
+    const nonce = findClaimNonce(1, output, deployed.node.address);
+    await deployed.quorum.connect(deployed.node).submitOutput(1, output, nonce);
     await deployed.quorum.finalize(1);
     await expect(deployed.quorum.finalize(1))
       .to.be.revertedWithCustomError(deployed.quorum, "RequestClosed");
+  });
+
+  it("requires the configured fee and refunds an expired request", async function () {
+    const { quorum, other } = await deploy();
+    const prompt = "refund me";
+    const latest = await ethers.provider.getBlock("latest");
+    const deadline = latest.timestamp + 100;
+    const contractAddress = await quorum.getAddress();
+    const beforeContractBalance = await ethers.provider.getBalance(contractAddress);
+
+    await expect(
+      quorum.connect(other).createRequest(1, prompt, 1, deadline, { value: 999n })
+    ).to.be.revertedWithCustomError(quorum, "IncorrectFee");
+    await quorum.connect(other).createRequest(1, prompt, 1, deadline, { value: 1000n });
+
+    await ethers.provider.send("evm_setNextBlockTimestamp", [deadline]);
+    await ethers.provider.send("evm_mine");
+    await quorum.connect(other).refundRequest(1);
+    const afterContractBalance = await ethers.provider.getBalance(contractAddress);
+    expect(afterContractBalance).to.equal(beforeContractBalance);
+    const request = await quorum.requests(1);
+    expect(request.refunded).to.equal(true);
+    expect(request.fee).to.equal(0n);
+  });
+
+  it("lets platform and winning miner claim allocated fee exactly once", async function () {
+    const { quorum, owner, node } = await deploy();
+    const prompt = "paid request";
+    const deadline = (await ethers.provider.getBlock("latest")).timestamp + 3600;
+    await quorum.createRequest(1, prompt, 1, deadline, { value: 1000n });
+    const nonce = findClaimNonce(1, "paid answer", node.address);
+    await quorum.connect(node).submitOutput(1, "paid answer", nonce);
+    await quorum.finalize(1);
+
+    const minerBefore = await ethers.provider.getBalance(node.address);
+    const minerClaim = await quorum.connect(node).claim();
+    const minerReceipt = await minerClaim.wait();
+    const minerGas = minerReceipt.gasUsed * minerReceipt.gasPrice;
+    const minerAfter = await ethers.provider.getBalance(node.address);
+    expect(minerAfter - minerBefore + minerGas).to.equal(900n);
+    expect(await quorum.claimable(node.address)).to.equal(0n);
+
+    const ownerBefore = await ethers.provider.getBalance(owner.address);
+    const ownerClaim = await quorum.claim();
+    const ownerReceipt = await ownerClaim.wait();
+    const ownerGas = ownerReceipt.gasUsed * ownerReceipt.gasPrice;
+    const ownerAfter = await ethers.provider.getBalance(owner.address);
+    expect(ownerAfter - ownerBefore + ownerGas).to.equal(100n);
+    await expect(quorum.claim()).to.be.revertedWithCustomError(quorum, "NothingToClaim");
   });
 });
