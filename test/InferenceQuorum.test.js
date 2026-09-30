@@ -1,9 +1,9 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
-function findClaimNonce(requestId, output, miner) {
+function findClaimNonce(requestId, output, miner, difficulty = 16) {
   const outputHash = ethers.keccak256(ethers.toUtf8Bytes(output));
-  const target = (ethers.MaxUint256 >> 16n);
+  const target = ethers.MaxUint256 >> BigInt(difficulty);
   for (let nonce = 0n; ; nonce++) {
     const proof = ethers.solidityPackedKeccak256(
       ["uint256", "bytes32", "address", "uint256"],
@@ -53,7 +53,7 @@ describe("InferenceQuorum createRequest", function () {
 
     await expect(quorum.createRequest(1, prompt, 2, deadline, { value: 1000n }))
       .to.emit(quorum, "RequestCreated")
-      .withArgs(1, 1, inputHash, 2, deadline);
+      .withArgs(1, 1, inputHash, 2, deadline, 16);
 
     const request = await quorum.requests(1);
     expect(request.modelVersion).to.equal(1n);
@@ -71,7 +71,7 @@ describe("InferenceQuorum createRequest", function () {
 
     await expect(quorum.connect(node).createRequest(1, prompt, 2, deadline, { value: 1000n }))
       .to.emit(quorum, "RequestCreated")
-      .withArgs(1, 1, ethers.keccak256(ethers.toUtf8Bytes(prompt)), 2, deadline);
+      .withArgs(1, 1, ethers.keccak256(ethers.toUtf8Bytes(prompt)), 2, deadline, 16);
   });
 
   it("rejects inactive versions, empty hashes, zero quorum, and expired deadlines", async function () {
@@ -114,8 +114,10 @@ describe("InferenceQuorum submitOutput", function () {
       .withArgs(1, node.address, outputHash);
 
     expect(await quorum.submissions(1, node.address)).to.equal(outputHash);
+    expect(await quorum.minerOfVersion(1, node.address)).to.equal(true);
     expect(await quorum.tally(1, outputHash)).to.equal(1n);
     expect(await quorum.outputText(1, outputHash)).to.equal(output);
+    expect((await quorum.requests(1)).difficulty).to.equal(16n);
   });
 
   it("emits QuorumReached when tally reaches quorum", async function () {
@@ -158,6 +160,16 @@ describe("InferenceQuorum submitOutput", function () {
       quorum.connect(node).submitOutput(1, "answer", 0)
     ).to.be.revertedWithCustomError(quorum, "InvalidProof");
   });
+
+  it("closes submissions as soon as quorum is reached", async function () {
+    const { quorum, node, other } = await createRequest(1);
+    const output = "winner";
+    const nonce = findClaimNonce(1, output, node.address);
+    await quorum.connect(node).submitOutput(1, output, nonce);
+    await expect(
+      quorum.connect(other).submitOutput(1, output, findClaimNonce(1, output, other.address))
+    ).to.be.revertedWithCustomError(quorum, "RequestClosed");
+  });
 });
 
 describe("InferenceQuorum finalize", function () {
@@ -177,7 +189,7 @@ describe("InferenceQuorum finalize", function () {
     expect(await quorum.outputText(1, request.winningOutput)).to.equal(output);
   });
 
-  it("finalizes and verifies when a hash reaches quorum", async function () {
+  it("splits miner reward equally among matching quorum contributors", async function () {
     const { quorum, node, owner } = await (async () => {
       const deployed = await deploy();
       const prompt = "prompt";
@@ -204,10 +216,25 @@ describe("InferenceQuorum finalize", function () {
     expect(request.finalized).to.equal(true);
     expect(request.winningOutput).to.equal(outputHash);
     expect(request.winningCount).to.equal(2n);
-    expect(request.winningMiner).to.equal(node.address);
+    expect(request.minerShare).to.equal(450n);
     expect(await quorum.claimable(owner.address)).to.equal(100n);
-    expect(await quorum.claimable(node.address)).to.equal(900n);
     expect(request.fee).to.equal(0n);
+
+    const nodeBefore = await ethers.provider.getBalance(node.address);
+    const nodeTx = await quorum.connect(node).claimShare(1);
+    const nodeReceipt = await nodeTx.wait();
+    const nodeGas = nodeReceipt.gasUsed * nodeReceipt.gasPrice;
+    const nodeAfter = await ethers.provider.getBalance(node.address);
+    expect(nodeAfter - nodeBefore + nodeGas).to.equal(450n);
+
+    const secondBefore = await ethers.provider.getBalance(secondNode.address);
+    const secondTx = await quorum.connect(secondNode).claimShare(1);
+    const secondReceipt = await secondTx.wait();
+    const secondGas = secondReceipt.gasUsed * secondReceipt.gasPrice;
+    const secondAfter = await ethers.provider.getBalance(secondNode.address);
+    expect(secondAfter - secondBefore + secondGas).to.equal(450n);
+    expect(await quorum.shareClaimed(1, node.address)).to.equal(true);
+    expect(await quorum.shareClaimed(1, secondNode.address)).to.equal(true);
   });
 
   it("cannot finalize before quorum or deadline", async function () {
@@ -262,22 +289,28 @@ describe("InferenceQuorum finalize", function () {
     expect(request.fee).to.equal(0n);
   });
 
-  it("lets platform and winning miner claim allocated fee exactly once", async function () {
-    const { quorum, owner, node } = await deploy();
+  it("allows only matching contributors to claim once", async function () {
+    const { quorum, owner, node, other } = await deploy();
     const prompt = "paid request";
     const deadline = (await ethers.provider.getBlock("latest")).timestamp + 3600;
-    await quorum.createRequest(1, prompt, 1, deadline, { value: 1000n });
+    await quorum.createRequest(1, prompt, 2, deadline, { value: 1000n });
     const nonce = findClaimNonce(1, "paid answer", node.address);
+    const otherNonce = findClaimNonce(1, "paid answer", other.address);
     await quorum.connect(node).submitOutput(1, "paid answer", nonce);
+    await quorum.connect(other).submitOutput(1, "paid answer", otherNonce);
     await quorum.finalize(1);
 
     const minerBefore = await ethers.provider.getBalance(node.address);
-    const minerClaim = await quorum.connect(node).claim();
+    const minerClaim = await quorum.connect(node).claimShare(1);
     const minerReceipt = await minerClaim.wait();
     const minerGas = minerReceipt.gasUsed * minerReceipt.gasPrice;
     const minerAfter = await ethers.provider.getBalance(node.address);
-    expect(minerAfter - minerBefore + minerGas).to.equal(900n);
-    expect(await quorum.claimable(node.address)).to.equal(0n);
+    expect(minerAfter - minerBefore + minerGas).to.equal(450n);
+    await quorum.connect(other).claimShare(1);
+    await expect(quorum.connect(node).claimShare(1))
+      .to.be.revertedWithCustomError(quorum, "NothingToClaim");
+    await expect(quorum.connect(owner).claimShare(1))
+      .to.be.revertedWithCustomError(quorum, "NothingToClaim");
 
     const ownerBefore = await ethers.provider.getBalance(owner.address);
     const ownerClaim = await quorum.claim();
@@ -286,5 +319,84 @@ describe("InferenceQuorum finalize", function () {
     const ownerAfter = await ethers.provider.getBalance(owner.address);
     expect(ownerAfter - ownerBefore + ownerGas).to.equal(100n);
     await expect(quorum.claim()).to.be.revertedWithCustomError(quorum, "NothingToClaim");
+  });
+});
+
+describe("InferenceQuorum difficulty governance", function () {
+  it("defaults to 16 and enforces difficulty range", async function () {
+    const { quorum, owner } = await deploy();
+    expect(await quorum.difficultyFor(1)).to.equal(16n);
+    expect(await quorum.isExclusiveTier(1)).to.equal(false);
+    await expect(quorum.connect(owner).proposeDifficulty(1, 11))
+      .to.be.revertedWithCustomError(quorum, "DifficultyOutOfRange");
+    await expect(quorum.connect(owner).proposeDifficulty(1, 81))
+      .to.be.revertedWithCustomError(quorum, "DifficultyOutOfRange");
+  });
+
+  it("requires owner or a miner registered for that model version", async function () {
+    const { quorum } = await deploy();
+    const [, , , stranger] = await ethers.getSigners();
+    await expect(quorum.connect(stranger).proposeDifficulty(1, 20))
+      .to.be.revertedWithCustomError(quorum, "UnauthorizedProposer");
+  });
+
+  it("leaves difficulty unchanged when the proposal window expires without three matching proposals", async function () {
+    const { quorum, owner, node } = await deploy();
+    const deadline = (await ethers.provider.getBlock("latest")).timestamp + 3600;
+    await quorum.createRequest(1, "register owner and miner", 1, deadline, { value: 1000n });
+    const output = "miner proof";
+    await quorum.connect(node).submitOutput(1, output, findClaimNonce(1, output, node.address));
+    await quorum.connect(owner).proposeDifficulty(1, 29);
+    await quorum.connect(node).proposeDifficulty(1, 29);
+
+    await ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60 + 1]);
+    await ethers.provider.send("evm_mine");
+    await quorum.resolveDifficulty(1);
+    expect(await quorum.difficultyFor(1)).to.equal(16n);
+  });
+
+  it("uses three distinct proposals to resolve difficulty and locks it per request", async function () {
+    const { quorum, owner, node, other } = await deploy();
+    const deadline = (await ethers.provider.getBlock("latest")).timestamp + 3600;
+    const prompt = "governance request";
+    await quorum.createRequest(1, prompt, 2, deadline, { value: 1000n });
+    expect((await quorum.requests(1)).difficulty).to.equal(16n);
+
+    const output = "same output";
+    await quorum.connect(node).submitOutput(1, output, findClaimNonce(1, output, node.address));
+    await quorum.connect(other).submitOutput(1, output, findClaimNonce(1, output, other.address));
+    await quorum.connect(owner).proposeDifficulty(1, 29);
+    await quorum.connect(node).proposeDifficulty(1, 29);
+    await expect(quorum.connect(other).proposeDifficulty(1, 29))
+      .to.emit(quorum, "DifficultyProposed")
+      .withArgs(1, 1, other.address, 29, 3)
+      .and.to.emit(quorum, "DifficultyRoundResolved")
+      .withArgs(1, 1, 29, 3, true);
+
+    await expect(quorum.resolveDifficulty(1))
+      .to.be.revertedWithCustomError(quorum, "ProposalRoundClosed");
+    expect(await quorum.difficultyFor(1)).to.equal(29n);
+    expect(await quorum.isExclusiveTier(1)).to.equal(false);
+    expect((await quorum.requests(1)).difficulty).to.equal(16n);
+
+    await quorum.createRequest(1, "request after governance", 1, deadline, { value: 1000n });
+    expect((await quorum.requests(2)).difficulty).to.equal(29n);
+  });
+
+  it("marks difficulty 50 as exclusive and 16 as open tier", async function () {
+    const { quorum, owner, node, other } = await deploy();
+    const deadline = (await ethers.provider.getBlock("latest")).timestamp + 3600;
+    await quorum.createRequest(1, "register miners", 2, deadline, { value: 1000n });
+    const output = "registration output";
+    await quorum.connect(node).submitOutput(1, output, findClaimNonce(1, output, node.address));
+    await quorum.connect(other).submitOutput(1, output, findClaimNonce(1, output, other.address));
+
+    await quorum.connect(owner).proposeDifficulty(1, 50);
+    await quorum.connect(node).proposeDifficulty(1, 50);
+    await expect(quorum.connect(other).proposeDifficulty(1, 50))
+      .to.emit(quorum, "DifficultyRoundResolved")
+      .withArgs(1, 1, 50, 3, true);
+    expect(await quorum.isExclusiveTier(1)).to.equal(true);
+    expect(await quorum.difficultyFor(1)).to.equal(50n);
   });
 });

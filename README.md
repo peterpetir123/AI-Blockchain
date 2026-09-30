@@ -145,10 +145,17 @@ Difficulty   : 16
 Perintah lengkap untuk peserta ada di [`miner/README.md`](miner/README.md).
 Peserta membutuhkan Node.js, `npm install`, wallet sendiri, dan sedikit BNB
 opBNB untuk gas. Mining dilakukan lokal; hanya transaksi proof yang masuk
- blockchain. Contract final memakai fee `0.0001 BNB`: 10% untuk platform dan
- 90% untuk miner pemenang. Miner harus memanggil `claim()` setelah request
- berhasil difinalisasi. Proof miner terikat ke request, output, address miner,
- dan nonce dengan difficulty awal 16.
+blockchain.
+
+Contract `InferenceQuorum` memakai fee `0.0001 BNB` per request: 10% untuk
+platform dan 90% dibagi rata ke semua miner yang output-nya cocok dengan
+output pemenang. Miner mengambil `claimShare(requestId)`; platform memakai
+`claim()`. Proof miner terikat ke request, output, address miner, dan nonce.
+Tidak ada sweep, sehingga reward miner yang tidak pernah di-claim membeku
+permanen. Difficulty Proof default `16` dan dapat diubah lewat usulan on-chain
+(3 usulan unik dengan nilai sama mengaktifkannya); nilai `≥ 50` ditandai tier
+eksklusif.
+
 Shard `8` sudah dibuka saat uji end-to-end. Shard `9` adalah challenge publik
 yang sedang tersedia dan masih terkunci.
 

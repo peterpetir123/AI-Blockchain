@@ -67,17 +67,56 @@ node node/worker_node.js
 
 Worker membaca `RequestCreated` dengan `eth_getLogs` per rentang blok. Setiap
 request yang cocok dengan model aktif dijalankan lokal, lalu output dikirim ke
-`submitOutput(requestId, output, nonce)`. Worker mencari nonce PoW difficulty
-16 secara lokal sebelum mengirim output. Wallet node harus memiliki BNB opBNB
-untuk gas. Jika menjadi miner pemenang, saldo reward dapat diambil dengan
-`claim()`; reward saat ini adalah 90% dari fee request.
+`submitOutput(requestId, output, nonce)`. Worker membaca difficulty milik request
+dari chain (bukan nilai hardcode) dan mencari nonce PoW secara lokal. Untuk model
+tier eksklusif worker mencetak peringatan bahwa nonce dapat memerlukan waktu
+sangat lama. Wallet node harus memiliki BNB opBNB untuk gas.
 
-### Reward hanya untuk miner pemenang
+### Reward dibagi rata antar kontributor
 
-Model distribusi saat ini meniru PoW Bitcoin: satu miner yang per.output
-pemenang menerima 90% fee. Miner lain yang mengirim output identik tetap
-bertahan gas tanpa reward. Pada uji quorum 2 dengan dua miner terpisah, miner
-kedua tercatat `claimable: 0`.
+Fee request `0.0001 BNB` dibagi:
+
+```text
+10% platform → `claim()` oleh owner
+90% miner    → dibagi rata ke semua miner yang output-nya cocok,
+               masing-masing `claimShare(requestId)`
+```
+
+Miner yang mengirim output berbeda dari output pemenang tidak berhak apa pun.
+Submission ditutup segera setelah kuorum tercapai, sehingga jumlah pembagi
+mengunci di nilai `quorum`. Tidak ada sweep: reward miner yang tidak pernah di-claim
+membeku permanen di contract, sesuai desain jaringan.
+
+Perintah klaim miner:
+
+```bash
+QUORUM_REQUEST_ID=1 node -e '
+const { JsonRpcProvider, Wallet, Contract } = require("ethers");
+require("dotenv").config();
+const d = require("./inference-quorum-deployment.json");
+const p = new JsonRpcProvider(process.env.RPC_URL || "https://opbnb-rpc.publicnode.com");
+const c = new Contract(d.quorumAddress, ["function claimShare(uint256)"], new Wallet(process.env.PRIVATE_KEY, p));
+c.claimShare(process.env.QUORUM_REQUEST_ID).then((t) => t.wait().then(() => console.log(t.hash)));
+'
+```
+
+### Difficulty per versi model
+
+Nilai difficulty awalnya `16` sehingga perangkat ringan bisa ikut. Owner atau miner
+yang sudah mengirim output valid untuk versi tersebut dapat mengusulkan nilai baru
+antara `12` dan `80`:
+
+```solidity
+proposeDifficulty(version, difficulty)
+```
+
+Tiga usulan unik dengan nilai sama langsung mengaktifkan difficulty tersebut; usulan
+dengan nilai berbeda tidak dapat mengubahnya. Jika dalam jendela 2 hari tidak tercapai
+tiga usulan yang sama, difficulty lama dipertahankan dan `resolveDifficulty(version)`
+menutup ronde. Nilai `≥ 50` ditandai sebagai tier eksklusif oleh
+`isExclusiveTier(version)`. Difficulty terkunci pada request saat request dibuat.
+
+### Output harus deterministik agar kuorum tercapai
 
 Agar output beberapa miner dianggap identik, inference harus deterministik.
 Build `llama-cli` minimal yang hanya mendukung `-m/-n/-ngl` memakai greedy
@@ -98,8 +137,8 @@ npm run request:inference -- "Jelaskan blockchain dalam satu kalimat"
 
 Requester membayar gas transaksi request dan finalisasi. Prompt dan output
 tersimpan publik on-chain. Atur `INFERENCE_QUORUM` untuk jumlah output identik
-Jika quorum tidak tercapai sampai deadline, requester dapat memanggil
-`refundRequest(requestId)`.
+yang harus diterima; default demo adalah `1`. Jika quorum tidak tercapai sampai
+deadline, requester dapat memanggil `refundRequest(requestId)`.
 
 ### Alur dari shard Pinata
 

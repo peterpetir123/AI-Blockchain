@@ -8,10 +8,10 @@ const { Contract, JsonRpcProvider, Wallet } = require("ethers");
 const ABI = [
   "function requestCount() view returns (uint256)",
   "function modelRegistry() view returns (address)",
-  "function requests(uint256) view returns (uint256 modelVersion, string prompt, bytes32 inputHash, uint256 quorum, uint256 deadline, address requester, address winningMiner, uint256 fee, bool finalized, bool refunded, bytes32 winningOutput, uint256 winningCount)",
+  "function requests(uint256) view returns (uint256 modelVersion,string prompt,bytes32 inputHash,uint256 quorum,uint256 deadline,uint256 difficulty,address requester,uint256 fee,uint256 minerShare,bool finalized,bool refunded,bytes32 winningOutput,uint256 winningCount)",
   "function getPrompt(uint256) view returns (string)",
   "function submitOutput(uint256 requestId, string output, uint256 nonce)",
-  "event RequestCreated(uint256 indexed requestId, uint256 indexed modelVersion, bytes32 inputHash, uint256 quorum, uint256 deadline)",
+  "event RequestCreated(uint256 indexed requestId, uint256 indexed modelVersion, bytes32 inputHash, uint256 quorum, uint256 deadline, uint256 difficulty)",
 ];
 
 function readJson(path) {
@@ -45,10 +45,10 @@ function numberEnv(name, fallback) {
   return value;
 }
 
-function findClaimNonce(requestId, output, miner) {
+function findClaimNonce(requestId, output, miner, difficulty) {
   const { solidityPackedKeccak256, keccak256, toUtf8Bytes } = require("ethers");
   const outputHash = keccak256(toUtf8Bytes(output));
-  const target = (1n << 256n) - 1n >> 16n;
+  const target = ((1n << 256n) - 1n) >> BigInt(difficulty);
   for (let nonce = 0n; ; nonce++) {
     const proof = solidityPackedKeccak256(
       ["uint256", "bytes32", "address", "uint256"],
@@ -107,12 +107,16 @@ async function main() {
           await contract.getPrompt(requestId),
           maxTokens
         );
-        const nonce = findClaimNonce(requestId, output, wallet.address);
+        const difficulty = Number(request.difficulty);
+        if (difficulty >= 50) {
+          console.warn(`request ${requestId}: tier EKSKLUSIF difficulty=${difficulty}; nonce dapat memerlukan waktu sangat lama`);
+        }
+        const nonce = findClaimNonce(requestId, output, wallet.address, difficulty);
         console.log(`request ${requestId}: nonce ${nonce}`);
         const tx = await contract.submitOutput(requestId, output, nonce);
         console.log(`request ${requestId}: tx ${tx.hash}`);
         await tx.wait();
-        console.log(`request ${requestId}: output terkirim`);
+        console.log(`request ${requestId}: output terkirim (difficulty ${difficulty})`);
       }
       nextBlock = endBlock + 1;
     }

@@ -14,11 +14,11 @@ const QUORUM_ABI = [
   "function createRequest(uint256 modelVersion,string prompt,uint256 quorum,uint256 deadline) returns (uint256)",
   "function requestCount() view returns (uint256)",
   "function requestFee() view returns (uint256)",
-  "function requests(uint256) view returns (uint256 modelVersion,string prompt,bytes32 inputHash,uint256 quorum,uint256 deadline,address requester,address winningMiner,uint256 fee,bool finalized,bool refunded,bytes32 winningOutput,uint256 winningCount)",
+  "function requests(uint256) view returns (uint256 modelVersion,string prompt,bytes32 inputHash,uint256 quorum,uint256 deadline,uint256 difficulty,address requester,uint256 fee,uint256 minerShare,bool finalized,bool refunded,bytes32 winningOutput,uint256 winningCount)",
   "function outputText(uint256,bytes32) view returns (string)",
   "function finalize(uint256)",
   "function isVerified(uint256) view returns (bool)",
-  "event RequestCreated(uint256 indexed requestId,uint256 indexed modelVersion,bytes32 inputHash,uint256 quorum,uint256 deadline)",
+  "event RequestCreated(uint256 indexed requestId,uint256 indexed modelVersion,bytes32 inputHash,uint256 quorum,uint256 deadline,uint256 difficulty)",
 ];
 const REGISTRY_ABI = [
   "function activeModelVersion() view returns (uint256)",
