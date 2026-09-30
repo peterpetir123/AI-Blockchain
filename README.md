@@ -145,7 +145,10 @@ Difficulty   : 16
 Perintah lengkap untuk peserta ada di [`miner/README.md`](miner/README.md).
 Peserta membutuhkan Node.js, `npm install`, wallet sendiri, dan sedikit BNB
 opBNB untuk gas. Mining dilakukan lokal; hanya transaksi proof yang masuk
-blockchain. Demo ini belum memiliki reward.
+ blockchain. Contract final memakai fee `0.0001 BNB`: 10% untuk platform dan
+ 90% untuk miner pemenang. Miner harus memanggil `claim()` setelah request
+ berhasil difinalisasi. Proof miner terikat ke request, output, address miner,
+ dan nonce dengan difficulty awal 16.
 Shard `8` sudah dibuka saat uji end-to-end. Shard `9` adalah challenge publik
 yang sedang tersedia dan masih terkunci.
 

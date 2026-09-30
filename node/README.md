@@ -67,7 +67,10 @@ node node/worker_node.js
 
 Worker membaca `RequestCreated` dengan `eth_getLogs` per rentang blok. Setiap
 request yang cocok dengan model aktif dijalankan lokal, lalu output dikirim ke
-`submitOutput`. Wallet node harus memiliki BNB opBNB untuk gas.
+`submitOutput(requestId, output, nonce)`. Worker mencari nonce PoW difficulty
+16 secara lokal sebelum mengirim output. Wallet node harus memiliki BNB opBNB
+untuk gas. Jika menjadi miner pemenang, saldo reward dapat diambil dengan
+`claim()`; reward saat ini adalah 90% dari fee request.
 
 Requester membuat permintaan dan mengambil hasil langsung dari blockchain:
 
@@ -79,7 +82,8 @@ npm run request:inference -- "Jelaskan blockchain dalam satu kalimat"
 
 Requester membayar gas transaksi request dan finalisasi. Prompt dan output
 tersimpan publik on-chain. Atur `INFERENCE_QUORUM` untuk jumlah output identik
-yang harus diterima; default demo adalah `1`.
+Jika quorum tidak tercapai sampai deadline, requester dapat memanggil
+`refundRequest(requestId)`.
 
 ### Alur dari shard Pinata
 
