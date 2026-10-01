@@ -400,3 +400,95 @@ describe("InferenceQuorum difficulty governance", function () {
     expect(await quorum.difficultyFor(1)).to.equal(50n);
   });
 });
+
+describe("InferenceQuorum emergency difficulty", function () {
+  async function registerMiner(version = 1) {
+    const deployed = await deploy();
+    const deadline = (await ethers.provider.getBlock("latest")).timestamp + 3600;
+    await deployed.quorum.createRequest(version, "register miner", 1, deadline, { value: 1000n });
+    const output = "miner output";
+    const nonce = findClaimNonce(1, output, deployed.node.address);
+    await deployed.quorum.connect(deployed.node).submitOutput(1, output, nonce);
+    return deployed;
+  }
+
+  it("cannot execute before the seven day delay", async function () {
+    const { quorum, owner } = await deploy();
+    await quorum.connect(owner).proposeDifficultyEmergency(1, 29);
+    await expect(quorum.executeDifficulty(1))
+      .to.be.revertedWithCustomError(quorum, "EmergencyNotReady");
+
+    await ethers.provider.send("evm_increaseTime", [7 * 24 * 60 * 60]);
+    await ethers.provider.send("evm_mine");
+    await expect(quorum.executeDifficulty(1))
+      .to.emit(quorum, "DifficultyEmergencyExecuted")
+      .withArgs(1, owner.address, 29);
+    expect(await quorum.difficultyFor(1)).to.equal(29n);
+  });
+
+  it("lets any address execute, not only the owner", async function () {
+    const { quorum, owner, other } = await deploy();
+    await quorum.connect(owner).proposeDifficultyEmergency(1, 24);
+    await ethers.provider.send("evm_increaseTime", [7 * 24 * 60 * 60 + 1]);
+    await ethers.provider.send("evm_mine");
+    await expect(quorum.connect(other).executeDifficulty(1))
+      .to.emit(quorum, "DifficultyEmergencyExecuted")
+      .withArgs(1, other.address, 24);
+    expect(await quorum.difficultyFor(1)).to.equal(24n);
+  });
+
+  it("lets a registered miner propose without owner consensus", async function () {
+    const { quorum, owner, node } = await registerMiner();
+    const [, , stranger] = await ethers.getSigners();
+    await expect(quorum.connect(stranger).proposeDifficultyEmergency(1, 30))
+      .to.be.revertedWithCustomError(quorum, "UnauthorizedProposer");
+    await quorum.connect(node).proposeDifficultyEmergency(1, 30);
+    await ethers.provider.send("evm_increaseTime", [7 * 24 * 60 * 60 + 1]);
+    await ethers.provider.send("evm_mine");
+    await quorum.executeDifficulty(1);
+    expect(await quorum.difficultyFor(1)).to.equal(30n);
+    // owner hanya satu pengusul tersisa, consensus 3-suara tidak dapat mencapai kuorum
+    await quorum.connect(owner).proposeDifficulty(1, 16);
+    expect(await quorum.difficultyFor(1)).to.equal(30n);
+  });
+
+  it("blocks a second proposal while one is pending and allows cancel", async function () {
+    const { quorum, owner, other } = await deploy();
+    await quorum.connect(owner).proposeDifficultyEmergency(1, 29);
+    await expect(quorum.connect(owner).proposeDifficultyEmergency(1, 20))
+      .to.be.revertedWithCustomError(quorum, "EmergencyPending");
+
+    await expect(quorum.connect(other).cancelDifficultyEmergency(1))
+      .to.be.revertedWithCustomError(quorum, "NotOwner");
+    await quorum.connect(owner).cancelDifficultyEmergency(1);
+    await expect(quorum.cancelDifficultyEmergency(1))
+      .to.be.revertedWithCustomError(quorum, "NothingPending");
+    await quorum.connect(owner).proposeDifficultyEmergency(1, 20);
+    expect((await quorum.emergencyDifficulty(1)).difficulty).to.equal(20n);
+  });
+
+  it("rejects out of range difficulty and reverts execution without pending proposal", async function () {
+    const { quorum, owner, node } = await deploy();
+    await expect(quorum.connect(owner).proposeDifficultyEmergency(1, 11))
+      .to.be.revertedWithCustomError(quorum, "DifficultyOutOfRange");
+    await expect(quorum.connect(owner).proposeDifficultyEmergency(1, 81))
+      .to.be.revertedWithCustomError(quorum, "DifficultyOutOfRange");
+    await expect(quorum.connect(node).executeDifficulty(1))
+      .to.be.revertedWithCustomError(quorum, "NothingPending");
+    await expect(quorum.connect(node).cancelDifficultyEmergency(1))
+      .to.be.revertedWithCustomError(quorum, "NotOwner");
+  });
+
+  it("keeps the three proposal consensus working", async function () {
+    const { quorum, owner, node, other } = await deploy();
+    const deadline = (await ethers.provider.getBlock("latest")).timestamp + 3600;
+    await quorum.createRequest(1, "consensus", 2, deadline, { value: 1000n });
+    const output = "consensus output";
+    await quorum.connect(node).submitOutput(1, output, findClaimNonce(1, output, node.address));
+    await quorum.connect(other).submitOutput(1, output, findClaimNonce(1, output, other.address));
+    await quorum.connect(owner).proposeDifficulty(1, 18);
+    await quorum.connect(node).proposeDifficulty(1, 18);
+    await quorum.connect(other).proposeDifficulty(1, 18);
+    expect(await quorum.difficultyFor(1)).to.equal(18n);
+  });
+});

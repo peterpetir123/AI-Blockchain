@@ -13,6 +13,7 @@ contract InferenceQuorum {
     uint256 public constant EXCLUSIVE_DIFFICULTY = 50;
     uint256 public constant PROPOSALS_REQUIRED = 3;
     uint256 public constant PROPOSAL_WINDOW = 2 days;
+    uint256 public constant EMERGENCY_DELAY = 7 days;
 
     struct Request {
         uint256 modelVersion;
@@ -38,6 +39,13 @@ contract InferenceQuorum {
         bool resolved;
     }
 
+    /// @notice Usulan perubahan difficulty yang menunggu masa tunda.
+    struct EmergencyProposal {
+        uint256 difficulty;
+        uint64 proposedAt;
+        bool pending;
+    }
+
     address public immutable owner;
     IModelRegistryVersion public immutable modelRegistry;
     uint256 public requestCount;
@@ -56,6 +64,12 @@ contract InferenceQuorum {
     mapping(uint256 => mapping(uint256 => mapping(uint256 => uint256))) public proposalTally;
     mapping(uint256 => mapping(uint256 => mapping(address => bool))) public hasProposed;
     mapping(uint256 => mapping(address => bool)) public shareClaimed;
+    mapping(uint256 => EmergencyProposal) public emergencyDifficulty;
+
+    modifier onlyOwner() {
+        if (msg.sender != owner) revert NotOwner();
+        _;
+    }
 
     event RequestCreated(
         uint256 indexed requestId,
@@ -73,6 +87,9 @@ contract InferenceQuorum {
     event RewardClaimed(address indexed account, uint256 amount);
     event DifficultyProposed(uint256 indexed version, uint256 indexed round, address indexed proposer, uint256 difficulty, uint256 votes);
     event DifficultyRoundResolved(uint256 indexed version, uint256 indexed round, uint256 difficulty, uint256 votes, bool changed);
+    event DifficultyEmergencyProposed(uint256 indexed version, address indexed proposer, uint256 difficulty, uint256 proposedAt);
+    event DifficultyEmergencyExecuted(uint256 indexed version, address indexed executor, uint256 difficulty);
+    event DifficultyEmergencyCancelled(uint256 indexed version);
 
     error NotOwner();
     error InvalidRequest();
@@ -92,6 +109,9 @@ contract InferenceQuorum {
     error AlreadyProposed();
     error ProposalRoundClosed();
     error ProposalNotReady();
+    error EmergencyNotReady();
+    error EmergencyPending();
+    error NothingPending();
 
     constructor(address modelRegistryAddress, uint256 initialRequestFee) {
         if (modelRegistryAddress == address(0)) revert InvalidRequest();
@@ -100,9 +120,52 @@ contract InferenceQuorum {
         requestFee = initialRequestFee;
     }
 
-    function setRequestFee(uint256 newRequestFee) external {
-        if (msg.sender != owner) revert NotOwner();
+    function setRequestFee(uint256 newRequestFee) external onlyOwner {
         requestFee = newRequestFee;
+    }
+
+    /// @notice Usulan cadangan yang menjamin difficulty tetap dapat diubah
+    ///         meski pengusul utama tidak mencapai consensus.
+    /// @dev Usulan menunggu EMERGENCY_DELAY dan dapat dieksekusi siapa pun.
+    function proposeDifficultyEmergency(uint256 version, uint256 difficulty) external {
+        if (version == 0 || version > modelRegistry.modelVersionCount()) {
+            revert InvalidRequest();
+        }
+        if (difficulty < MIN_DIFFICULTY || difficulty > MAX_DIFFICULTY) {
+            revert DifficultyOutOfRange();
+        }
+        if (msg.sender != owner && !minerOfVersion[version][msg.sender]) {
+            revert UnauthorizedProposer();
+        }
+        if (emergencyDifficulty[version].pending) revert EmergencyPending();
+
+        emergencyDifficulty[version] = EmergencyProposal({
+            difficulty: difficulty,
+            proposedAt: uint64(block.timestamp),
+            pending: true
+        });
+        emit DifficultyEmergencyProposed(version, msg.sender, difficulty, block.timestamp);
+    }
+
+    /// @notice Menjalankan usulan emergency setelah masa tunda lewat.
+    function executeDifficulty(uint256 version) external {
+        EmergencyProposal storage proposal = emergencyDifficulty[version];
+        if (!proposal.pending) revert NothingPending();
+        if (block.timestamp < uint256(proposal.proposedAt) + EMERGENCY_DELAY) {
+            revert EmergencyNotReady();
+        }
+
+        uint256 difficulty = proposal.difficulty;
+        delete emergencyDifficulty[version];
+        claimDifficulty[version] = difficulty;
+        emit DifficultyEmergencyExecuted(version, msg.sender, difficulty);
+    }
+
+    /// @notice Owner membatalkan usulan emergency yang belum dieksekusi.
+    function cancelDifficultyEmergency(uint256 version) external onlyOwner {
+        if (!emergencyDifficulty[version].pending) revert NothingPending();
+        delete emergencyDifficulty[version];
+        emit DifficultyEmergencyCancelled(version);
     }
 
     function difficultyFor(uint256 version) public view returns (uint256) {
