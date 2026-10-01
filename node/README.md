@@ -116,6 +116,27 @@ tiga usulan yang sama, difficulty lama dipertahankan dan `resolveDifficulty(vers
 menutup ronde. Nilai `≥ 50` ditandai sebagai tier eksklusif oleh
 `isExclusiveTier(version)`. Difficulty terkunci pada request saat request dibuat.
 
+### Jalur emergency (anti deadlock)
+
+Kalau consensus tiga usulan tidak pernah tercapai — misalnya semua miner yang
+pernah 제안 hilang — difficulty tidak akan bisa diubah. Jalur emergency menutup
+lubang itu:
+
+```solidity
+proposeDifficultyEmergency(version, difficulty)  // owner atau miner terdaftar
+executeDifficulty(version)                      // siapa pun, setelah 7 hari
+cancelDifficultyEmergency(version)              // owner, sebelum dieksekusi
+```
+
+```text
+Owner/Miner mengusulkan  →  menunggu 7 hari  →  siapa pun menjalankan
+```
+
+Efeknya: owner tidak dapat mengubah difficulty sendirian karena harus menunggu
+masa tunda, tetapi jaringan tidak pernah terkunci selamanya karena eksekusi tidak
+bergantung pada wallet owner. Usulan kedua saat masih pending ditolak, dan owner
+bisa membatalkan usulan yang tidak diinginkan.
+
 ### Output harus deterministik agar kuorum tercapai
 
 Agar output beberapa miner dianggap identik, inference harus deterministik.

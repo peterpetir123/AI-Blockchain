@@ -11,11 +11,12 @@ Alamat contract:
 
 - `AIShardUnlock`: `0x8D34729c9802F388b88e18f34B23EEb8fA9B859b`
 - `ModelRegistry`: `0x4e5C31b13082CB98A34552965E7A41e46F7a8070`
-- `InferenceQuorum`: `0xddB258315896EAd66A0381953D2FEB172e0e4BEf`
+- `InferenceQuorum`: `0xEa91Cd8096df7118F951b2337B6f01FCA3566AD7`
 
-Contract `InferenceQuorum` sebelumnya (`0x3165D784eb2Bb68d40c3350a643AFfC970054239`)
-sudah diganti karena versi itu hanya membayar satu miner pemenang. Kontrak lama
-tetap ada di chain dan tidak pernah dihapus.
+Dua contract `InferenceQuorum` sebelumnya sudah diganti dan tidak pernah
+dihapus dari chain: `0x3165D784...` hanya membayar satu miner pemenang, lalu
+`0xddB25831...` belum punya jalur emergency governance. Yang dipakai adalah
+alamat di atas.
 
 ## Project documents
 
@@ -180,14 +181,15 @@ keccak256(abi.encodePacked(shardId, nonce)) < 2^256 >> difficulty
 
 ## Batasan yang disengaja
 
-- **Governance bisa macet bila pengusul hilang.** Perubahan difficulty memerlukan
-  tiga usulan unik dari owner atau miner yang sudah mengirim output valid untuk
-  versi model tersebut. Jika jaringan masih kecil dan sebagian miner hilang,
-  tidak akan ada tiga pengusul dan difficulty tidak dapat diubah lagi. Saat ini
-  belum ada jalan keluar yang di-emergency-kan; menambahkannya butuh redeemploy.
+- **Governance punya jalur emergency.** Kalau tiga pengusul tidak pernah tercapai,
+  owner atau miner terdaftar dapat mengusulkan difficulty baru yang aktif 7 hari
+  kemudian dan dapat dieksekusi **siapa pun**. Owner tidak dapat mengubah
+  difficulty secara sepihak, dan jaringan tidak dapat terkunci selamanya.
 - **Belum ada anti-sybil.** Satu orang bisa mengirim banyak output dari banyak
   wallet lalu ikut mengusulkan difficulty. Yang menutup ini adalah stake yang
   hilang ketika miner mengirim claim palsu, dan itu belum ada.
+- **Tidak ada sweep.** Reward miner yang tidak pernah diklaim akan membeku
+  permanen di dalam contract, bukan kembali ke platform.
 - **Enkripsi shard bersifat naratif.** Shard dipublikasikan di IPFS; "unlock"
   menggerakkan narasi/pesan AI on-chain, **bukan** membuka rahasia kriptografis.
   Jangan mengklaim model ini rahasia.
