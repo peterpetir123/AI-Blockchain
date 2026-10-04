@@ -1,0 +1,11 @@
+{
+  "name": "Qwen2.5-0.5B-Instruct",
+  "version": "1.0.0",
+  "cid": "QmRFmDH2Vz4rFSSn8B84e6tagVMjfFV8K8HG9fBeg5M8Ja",
+  "sha256": "0x6eb923e7d26e9cea28811e1a8e852009b21242fb157b26149d3b188f3a8c8653",
+  "format": "GGUF",
+  "quantization": "Q4_K_M",
+  "runtimeVersion": "llama.cpp-0.5.0-dev",
+  "license": "Apache-2.0",
+  "source": "https://huggingface.co/bartowski/Qwen2.5-0.5B-Instruct-GGUF"
+}

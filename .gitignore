@@ -8,7 +8,9 @@ typechain-types/
 coverage/
 coverage.json
 shards/
-manifest.json
 deployment.json
 model-registry-deployment.json
-model/manifest.json
+# Catatan: manifest.json dan model/manifest.json SENGAJA ikut di-commit.
+# Keduanya hanya berisi data publik (CID, SHA-256, metadata model) dan
+# dibutuhkan miner untuk merekonstruksi model dari clone baru.
+# Yang tetap di-ignore: shards/ (binari ~400 MB, diunduh dari Pinata).

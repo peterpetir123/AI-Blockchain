@@ -74,7 +74,12 @@ Verifikasi multi-node/evaluator akan ditambahkan pada tahap berikutnya.
 
 Setelah model diunggah dan dipin di IPFS, salin `model/manifest.example.json`
 menjadi `model/manifest.json`, lalu isi CID, SHA-256 file, lisensi, sumber, dan
-versi runtime yang benar. File manifest lokal di-ignore Git.
+versi runtime yang benar.
+
+`manifest.json` (daftar shard) dan `model/manifest.json` (metadata model) **sudah
+ikut di-commit** karena isinya data publik yang dibutuhkan miner untuk
+merekonstruksi model dari clone baru. Yang di-ignore Git hanya `shards/`, yaitu
+binary shard yang diunduh dari Pinata.
 
 Setelah registry dideploy dan tersimpan di `model-registry-deployment.json`:
 
@@ -94,7 +99,7 @@ ACTIVATE_MODEL=true npm run register:model:testnet
 ```bash
 npm install
 cp .env.example .env      # isi PRIVATE_KEY (wallet ber-BNB), PINATA_JWT
-npx hardhat test          # 8 test harus lulus
+npx hardhat test          # 39 test harus lulus
 ```
 
 ## Deploy percobaan ke BNB Smart Chain Testnet

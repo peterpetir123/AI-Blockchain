@@ -13,6 +13,20 @@ Verifikasi:
 llama-cli --version
 ```
 
+## Dependensi
+
+Node di folder ini memakai `ethers` dari `package.json` root, jadi install
+terjadi **sekali di root repo** — bukan di dalam `node/`:
+
+```bash
+git clone https://github.com/peterpetir123/AI-Blockchain
+cd AI-Blockchain
+npm install
+```
+
+`node/` tidak punya `package.json` sendiri. Menjalankan `npm install` di dalam
+`node/` tidak akan memasang apa pun.
+
 ## Jalankan model
 
 ```bash
@@ -38,11 +52,11 @@ Model harus berupa file GGUF yang sumber, lisensi, dan hash-nya terdokumentasi.
 
 ## Jalankan inference dengan registry on-chain
 
-Setelah `ModelRegistry` aktif dan `model-registry-deployment.json` tersedia:
+Setelah `ModelRegistry` aktif dan `model-registry-deployment.json` tersedia,
+jalankan dari root repo:
 
 ```bash
-cd /home/hengkerprotzy/coding/ai-agent
-MODEL_PATH=/home/hengkerprotzy/models/Qwen2.5-0.5B-Instruct-Q4_K_M.gguf \
+MODEL_PATH=/path/ke/model.gguf \
 npm run node:inference -- "Jelaskan blockchain dalam satu kalimat"
 ```
 

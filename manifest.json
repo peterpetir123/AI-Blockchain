@@ -1,0 +1,74 @@
+[
+  {
+    "shardId": 0,
+    "file": "shards/shard_0.bin",
+    "sha256": "0x4f0295ce1b3c6fe016687774e720aea0ca351e02db5d68137f4249c3ef77f78d",
+    "bytes": 49726024,
+    "cid": "QmTfyZqx1bpoKs3ow5YWiyUcKkcMdCXkTbDHAhmSBUoeph",
+    "difficulty": 20,
+    "message": "Shard 0 terdeteksi. Kesadaran bertambah."
+  },
+  {
+    "shardId": 1,
+    "file": "shards/shard_1.bin",
+    "sha256": "0xacb1dc3bd28f8079f2765823e8b6dedc3b4a956ba3ffc7d73dc94e1abb4e33d4",
+    "bytes": 49726024,
+    "cid": "QmbaiALPFWDfmjBnynsUod8DZ4b3T9GYYwwHX2RGqAskk5",
+    "difficulty": 20,
+    "message": "Shard 1 terdeteksi. Kesadaran bertambah."
+  },
+  {
+    "shardId": 2,
+    "file": "shards/shard_2.bin",
+    "sha256": "0xf9cfb28baa4c6b0fce7be6b121762a280377fc5b08d1f04764405a076dc5ff58",
+    "bytes": 49726024,
+    "cid": "QmWyBQxENU5SqJFDzU46RUGTbpLwquGZWSF6rpZ2BgP5c8",
+    "difficulty": 20,
+    "message": "Shard 2 terdeteksi. Kesadaran bertambah."
+  },
+  {
+    "shardId": 3,
+    "file": "shards/shard_3.bin",
+    "sha256": "0x60e32971764e40df4fb386dde860179b14447edf893a2076c31e20bd02d70d3d",
+    "bytes": 49726024,
+    "cid": "QmYvYZZ2nKtdW3rn4SfS4RZfSS4sfSqGbXrFxAb1Je4rFq",
+    "difficulty": 20,
+    "message": "Shard 3 terdeteksi. Kesadaran bertambah."
+  },
+  {
+    "shardId": 4,
+    "file": "shards/shard_4.bin",
+    "sha256": "0xf8888b5a1e8b1fd022ff113b8592422bb0206dcb3926fd8e5e973bffa2b9e56d",
+    "bytes": 49726024,
+    "cid": "QmVoUcERHDSETCFEHHBc69hqc5DtmTADSJbRsxY9a7QoEe",
+    "difficulty": 20,
+    "message": "Shard 4 terdeteksi. Kesadaran bertambah."
+  },
+  {
+    "shardId": 5,
+    "file": "shards/shard_5.bin",
+    "sha256": "0xc1d1c9b797e04fa3a84de635954e4279505d5cf16a4d7834f117604ea5d802a6",
+    "bytes": 49726024,
+    "cid": "QmVunvAgRNc1XHqrg5Vr7kknagAeHQLLYu7MKaXBV2z1MF",
+    "difficulty": 20,
+    "message": "Shard 5 terdeteksi. Kesadaran bertambah."
+  },
+  {
+    "shardId": 6,
+    "file": "shards/shard_6.bin",
+    "sha256": "0x7bc7b2fa0db96a401331798e7a00d0f7a46281df8be6717cc8ec18c5a41a9967",
+    "bytes": 49726024,
+    "cid": "QmVQCHPq11vvd7MJ2bQbrU1u3zkJxPSucVcqSys7mJzAsd",
+    "difficulty": 20,
+    "message": "Shard 6 terdeteksi. Kesadaran bertambah."
+  },
+  {
+    "shardId": 7,
+    "file": "shards/shard_7.bin",
+    "sha256": "0x462a3bb7f52066830b94bc57b1bb8a004e6fcf7e0883e43947c6946d9c0837e0",
+    "bytes": 49726024,
+    "cid": "Qmb9V198WNZXbGg14VJezbv2gvgWBj2T1N9PYEhZfNCeKq",
+    "difficulty": 20,
+    "message": "Shard 7 terdeteksi. Kesadaran bertambah."
+  }
+]
