@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Baca pesan AI dari event ShardUnlocked on-chain. Read-only, tanpa private key.
+ * Reads AI messages from on-chain ShardUnlocked events. Read-only, no private key.
  *
  *   node scripts/read_messages.js --contract 0x... [--from 0] [--to latest]
  *
@@ -20,7 +20,7 @@ function arg(name, def) {
 
 async function main() {
   const address = arg("contract", process.env.CONTRACT_ADDRESS);
-  if (!address) throw new Error("butuh --contract 0x... atau env CONTRACT_ADDRESS");
+  if (!address) throw new Error("need --contract 0x... or the CONTRACT_ADDRESS env var");
 
   const provider = new JsonRpcProvider(
     arg("rpc", process.env.RPC_URL || "https://opbnb-rpc.publicnode.com")
@@ -33,13 +33,13 @@ async function main() {
 
   const logs = await contract.queryFilter("ShardUnlocked", from, latest);
   if (logs.length === 0) {
-    console.log(`Tidak ada ShardUnlocked di blok ${from}..${latest}`);
+    console.log(`No ShardUnlocked between blocks ${from}..${latest}`);
     return;
   }
-  console.log(`${logs.length} pesan AI ditemukan:\n`);
+  console.log(`${logs.length} AI messages found:\n`);
   for (const l of logs) {
     const a = l.args;
-    console.log(`# shard ${a.shardId} | miner ${a.miner} | blok ${l.blockNumber}`);
+    console.log(`# shard ${a.shardId} | miner ${a.miner} | block ${l.blockNumber}`);
     console.log(`  "${a.message}"`);
     console.log(`  cid: ${a.cid}\n`);
   }

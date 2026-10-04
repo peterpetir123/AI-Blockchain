@@ -3,7 +3,7 @@ const { ethers } = require("hardhat");
 
 const CID = "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi";
 const SHARD_HASH = ethers.keccak256(ethers.toUtf8Bytes("shard-0"));
-const MESSAGE = "Peter Petir created me. Shard 0 terbuka.";
+const MESSAGE = "Peter Petir created me. Shard 0 unlocked.";
 const DIFFICULTY = 8;
 
 function target(difficulty) {
@@ -28,14 +28,14 @@ async function deployFixture() {
 }
 
 describe("AIShardUnlock", function () {
-  it("hanya owner yang bisa menambah shard", async function () {
+  it("only the owner can add a shard", async function () {
     const { contract, other } = await deployFixture();
     await expect(
       contract.connect(other).addShard(CID, SHARD_HASH, DIFFICULTY, MESSAGE)
     ).to.be.revertedWithCustomError(contract, "NotOwner");
   });
 
-  it("menambah shard dan menaikkan shardCount", async function () {
+  it("adds a shard and increments shardCount", async function () {
     const { contract } = await deployFixture();
     await contract.addShard(CID, SHARD_HASH, DIFFICULTY, MESSAGE);
 
@@ -48,7 +48,7 @@ describe("AIShardUnlock", function () {
     expect(await contract.shardMessage(0)).to.equal(MESSAGE);
   });
 
-  it("proof valid meng-unlock shard dan emit pesan AI", async function () {
+  it("a valid proof unlocks the shard and emits an AI message", async function () {
     const { contract, miner } = await deployFixture();
     await contract.addShard(CID, SHARD_HASH, DIFFICULTY, MESSAGE);
 
@@ -60,7 +60,7 @@ describe("AIShardUnlock", function () {
     expect(await contract.isUnlocked(0)).to.equal(true);
   });
 
-  it("proof invalid revert InvalidProof", async function () {
+  it("an invalid proof reverts with InvalidProof", async function () {
     const { contract, miner } = await deployFixture();
     await contract.addShard(CID, SHARD_HASH, 16, MESSAGE);
 
@@ -70,7 +70,7 @@ describe("AIShardUnlock", function () {
     ).to.be.revertedWithCustomError(contract, "InvalidProof");
   });
 
-  it("shard tidak bisa di-unlock dua kali", async function () {
+  it("a shard cannot be unlocked twice", async function () {
     const { contract, miner } = await deployFixture();
     await contract.addShard(CID, SHARD_HASH, DIFFICULTY, MESSAGE);
 
@@ -82,7 +82,7 @@ describe("AIShardUnlock", function () {
     ).to.be.revertedWithCustomError(contract, "AlreadyUnlocked");
   });
 
-  it("shard tidak dikenal revert UnknownShard", async function () {
+  it("an unknown shard reverts with UnknownShard", async function () {
     const { contract, miner } = await deployFixture();
     await expect(
       contract.connect(miner).submitProof(99, 0)

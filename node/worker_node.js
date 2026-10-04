@@ -19,8 +19,8 @@ function readJson(path) {
 }
 
 function runModel(cli, modelPath, prompt, maxTokens) {
-  // Flag deterministik hanya dikirim bila llama-cli build mendukungnya.
-  // Build minimal (hanya -m/-n/-ngl) memakai greedy decoding dan sudah deterministik.
+  // Deterministic flags are only sent when the llama-cli build supports them.
+  // A minimal build (only -m/-n/-ngl) uses greedy decoding and is already deterministic.
   const sampling = [];
   if (process.env.LLAMA_TEMP !== undefined) sampling.push("--temp", process.env.LLAMA_TEMP);
   if (process.env.LLAMA_SEED !== undefined) sampling.push("--seed", process.env.LLAMA_SEED);
@@ -33,7 +33,7 @@ function runModel(cli, modelPath, prompt, maxTokens) {
     child.on("error", reject);
     child.on("exit", (code, signal) => {
       if (signal) return reject(new Error(`runtime dihentikan oleh ${signal}`));
-      if (code !== 0) return reject(new Error(`runtime keluar dengan kode ${code}`));
+      if (code !== 0) return reject(new Error(`runtime exited with code ${code}`));
       resolve(output.trim());
     });
   });
@@ -41,7 +41,7 @@ function runModel(cli, modelPath, prompt, maxTokens) {
 
 function numberEnv(name, fallback) {
   const value = Number(process.env[name] ?? fallback);
-  if (!Number.isInteger(value) || value < 0) throw new Error(`${name} tidak valid`);
+  if (!Number.isInteger(value) || value < 0) throw new Error(`${name} is invalid`);
   return value;
 }
 
@@ -62,9 +62,9 @@ async function main() {
   const deploymentPath = process.env.QUORUM_DEPLOYMENT || "inference-quorum-deployment.json";
   const modelPath = process.env.MODEL_PATH;
   const privateKey = process.env.PRIVATE_KEY;
-  if (!modelPath) throw new Error("MODEL_PATH belum di-set");
-  if (!privateKey) throw new Error("PRIVATE_KEY belum di-set");
-  if (!fs.existsSync(modelPath)) throw new Error(`Model tidak ditemukan: ${modelPath}`);
+  if (!modelPath) throw new Error("MODEL_PATH is not set");
+  if (!privateKey) throw new Error("PRIVATE_KEY is not set");
+  if (!fs.existsSync(modelPath)) throw new Error(`Model not found: ${modelPath}`);
 
   const deployment = readJson(deploymentPath);
   const provider = new JsonRpcProvider(process.env.RPC_URL || "https://opbnb-rpc.publicnode.com");
@@ -100,7 +100,7 @@ async function main() {
         if (request.finalized || request.deadline <= BigInt(Math.floor(Date.now() / 1000))) continue;
         if (request.modelVersion !== await registry.activeModelVersion()) continue;
 
-        console.log(`request ${requestId}: menjalankan inference`);
+        console.log(`request ${requestId}: running inference`);
         const output = await runModel(
           process.env.LLAMA_CLI || "llama-cli",
           modelPath,
@@ -109,14 +109,14 @@ async function main() {
         );
         const difficulty = Number(request.difficulty);
         if (difficulty >= 50) {
-          console.warn(`request ${requestId}: tier EKSKLUSIF difficulty=${difficulty}; nonce dapat memerlukan waktu sangat lama`);
+          console.warn(`request ${requestId}: EXCLUSIVE tier difficulty=${difficulty}; the nonce may take a very long time`);
         }
         const nonce = findClaimNonce(requestId, output, wallet.address, difficulty);
         console.log(`request ${requestId}: nonce ${nonce}`);
         const tx = await contract.submitOutput(requestId, output, nonce);
         console.log(`request ${requestId}: tx ${tx.hash}`);
         await tx.wait();
-        console.log(`request ${requestId}: output terkirim (difficulty ${difficulty})`);
+        console.log(`request ${requestId}: output submitted (difficulty ${difficulty})`);
       }
       nextBlock = endBlock + 1;
     }

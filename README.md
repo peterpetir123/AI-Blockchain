@@ -1,94 +1,93 @@
 # AI Shard Unlock Agent
 
-Prototipe jaringan AI komunitas. `AIShardUnlock` menangani tahap unlock naratif,
-sedangkan `ModelRegistry` mendaftarkan satu file model utuh melalui CID dan
-hash. Neural network berjalan di node komunitas; blockchain menyimpan versi
-model dan hash hasil inference, bukan bobot atau inference-nya.
+Prototype of a community AI network. `AIShardUnlock` handles the narrative unlock
+stage, while `ModelRegistry` registers a single whole model file via CID and
+hash. The neural network runs on community nodes; the blockchain stores the model
+version and inference output hashes, not the weights or the inference itself.
 
-Target jaringan: **opBNB mainnet** (chainId 204). Contract sudah live.
+Target network: **opBNB mainnet** (chainId 204). Contracts are live.
 
-Alamat contract:
+Contract addresses:
 
 - `AIShardUnlock`: `0x8D34729c9802F388b88e18f34B23EEb8fA9B859b`
 - `ModelRegistry`: `0x4e5C31b13082CB98A34552965E7A41e46F7a8070`
 - `InferenceQuorum`: `0xEa91Cd8096df7118F951b2337B6f01FCA3566AD7`
 
-Dua contract `InferenceQuorum` sebelumnya sudah diganti dan tidak pernah
-dihapus dari chain: `0x3165D784...` hanya membayar satu miner pemenang, lalu
-`0xddB25831...` belum punya jalur emergency governance. Yang dipakai adalah
-alamat di atas.
+Two earlier `InferenceQuorum` contracts were replaced but never removed from the
+chain: `0x3165D784...` paid only a single winning miner, then `0xddB25831...`
+had no emergency governance path. The address used is the one above.
 
 ## Project documents
 
 - [License](LICENSE) — MIT.
-- [Contributing](CONTRIBUTING.md) — setup test dan panduan kontribusi.
-- [Security](SECURITY.md) — penanganan secret dan pelaporan kerentanan.
+- [Contributing](CONTRIBUTING.md) — test setup and contribution guide.
+- [Security](SECURITY.md) — secret handling and vulnerability reporting.
 
-## Alur
+## Flow
 
 ```
 Deployer ──addShard(cid, hash, difficulty, message)──► CONTRACT
                                                           │
-Komunitas ──submitProof(shardId, nonce)──► validasi PoW ──┤
+Community ──submitProof(shardId, nonce)──► PoW validation ─┤
                                                           ▼
              emit ShardUnlocked(shardId, miner, message, cid, shardHash, nonce)
 ```
 
-Tidak ada server, worker, maupun bot. Satu-satunya output adalah event on-chain.
+There is no server, worker, or bot. The only output is an on-chain event.
 
-## Struktur
+## Structure
 
 ```
 ai-agent/
-├── contracts/AIShardUnlock.sol   # unlock naratif dan event pesan
-├── contracts/ModelRegistry.sol   # versi model + catatan inference
-├── test/                         # unit contract + integrasi miner
+├── contracts/AIShardUnlock.sol   # narrative unlock and message event
+├── contracts/ModelRegistry.sol   # model version + inference record
+├── test/                         # contract unit tests + miner integration
 ├── scripts/
-│   ├── deploy_contract.js        # deploy + cetak address & topic hash
-│   ├── add_shards.js             # registrasi shard dari manifest.json
-│   ├── add_demo_shard.js         # tambah satu challenge publik difficulty rendah
+│   ├── deploy_contract.js        # deploy + print address & topic hash
+│   ├── add_shards.js             # register shards from manifest.json
+│   ├── add_demo_shard.js         # add one public low-difficulty challenge shard
 │   └── shard_pipeline.py         # split file -> sha256 -> IPFS -> manifest.json
-│   ├── assemble_shards.py        # download CID Pinata -> verifikasi -> gabung GGUF
-├── miner/                        # miner publik (bagikan ke komunitas)
-├── node/                         # runner model GGUF lokal
+│   ├── assemble_shards.py        # download Pinata CID -> verify -> merge GGUF
+├── miner/                        # public miner (share with the community)
+├── node/                         # local GGUF model runner
 └── hardhat.config.js
 ```
 
-## Model dan inference
+## Model and inference
 
-Model Qwen GGUF disimpan sebagai satu file di IPFS/storage. Contract hanya
-mencatat CID, hash, format, quantization, dan runtime. Node komunitas mengunduh
-file, memverifikasi hash, lalu menjalankan model melalui `llama.cpp`.
+The Qwen GGUF model is stored as a single file in IPFS/storage. The contract only
+records the CID, hash, format, quantization, and runtime. Community nodes download
+the file, verify the hash, then run the model through `llama.cpp`.
 
-Urutannya:
+The sequence:
 
 ```text
-model GGUF → IPFS → ModelRegistry → node komunitas → inference → hash dicatat
+model GGUF → IPFS → ModelRegistry → community node → inference → hash recorded
 ```
 
-`InferenceRecorded` membuktikan bahwa sebuah node mengirim hash pada versi
-model aktif; event tersebut **bukan bukti kriptografis** bahwa inference benar.
-Verifikasi multi-node/evaluator akan ditambahkan pada tahap berikutnya.
+`InferenceRecorded` proves that a node submitted a hash for the active model
+version; the event is **not cryptographic proof** that the inference was correct.
+Multi-node verification/evaluators will be added in the next stage.
 
-### Manifest dan registrasi model
+### Manifest and model registration
 
-Setelah model diunggah dan dipin di IPFS, salin `model/manifest.example.json`
-menjadi `model/manifest.json`, lalu isi CID, SHA-256 file, lisensi, sumber, dan
-versi runtime yang benar.
+After the model is uploaded and pinned on IPFS, copy `model/manifest.example.json`
+to `model/manifest.json`, then fill in the correct CID, file SHA-256, license,
+source, and runtime version.
 
-`manifest.json` (daftar shard) dan `model/manifest.json` (metadata model) **sudah
-ikut di-commit** karena isinya data publik yang dibutuhkan miner untuk
-merekonstruksi model dari clone baru. Yang di-ignore Git hanya `shards/`, yaitu
-binary shard yang diunduh dari Pinata.
+`manifest.json` (shard list) and `model/manifest.json` (model metadata) **are
+committed** because they hold public data that miners need to reconstruct the model
+from a fresh clone. Only `shards/` is ignored by Git, which is the shard binary
+downloaded from Pinata.
 
-Setelah registry dideploy dan tersimpan di `model-registry-deployment.json`:
+After the registry is deployed and stored in `model-registry-deployment.json`:
 
 ```bash
 npm run register:model:testnet
 ```
 
-Registrasi tidak otomatis mengaktifkan model. Setelah metadata/CID/hash ditinjau,
-aktifkan versi tersebut dengan:
+Registration does not automatically activate the model. After reviewing the
+metadata/CID/hash, activate that version with:
 
 ```bash
 ACTIVATE_MODEL=true npm run register:model:testnet
@@ -98,54 +97,58 @@ ACTIVATE_MODEL=true npm run register:model:testnet
 
 ```bash
 npm install
-cp .env.example .env      # isi PRIVATE_KEY (wallet ber-BNB), PINATA_JWT
-npx hardhat test          # 39 test harus lulus
+cp .env.example .env      # fill in PRIVATE_KEY (wallet with BNB), PINATA_JWT
+npx hardhat test          # all 39 tests must pass
 ```
 
-## Deploy percobaan ke BNB Smart Chain Testnet
+## Trial deployment to BNB Smart Chain Testnet
 
-Gunakan wallet khusus testnet yang berbeda dari wallet mainnet. Isi `TESTNET_PRIVATE_KEY` di `.env`, lalu kirim tBNB dari faucet BNB Smart Chain Testnet ke alamat wallet tersebut. Deploy percobaan dengan:
+Use a dedicated testnet wallet that is different from your mainnet wallet. Put
+`TESTNET_PRIVATE_KEY` in `.env`, then send tBNB from the BNB Smart Chain Testnet
+faucet to that wallet address. Deploy with:
 
 ```bash
 npm run deploy:testnet
 ```
 
-BNB Smart Chain Testnet memakai chain ID `97`; opBNB mainnet memakai `204`. Jangan masukkan private key ke repository. `deployment.json` menyimpan hasil deploy lokal dan di-ignore Git.
+BNB Smart Chain Testnet uses chain ID `97`; opBNB mainnet uses `204`. Never commit a
+private key to the repository. `deployment.json` stores local deployment results and
+is ignored by Git.
 
-Deploy registry model ke testnet:
+Deploy the model registry to testnet:
 
 ```bash
 npm run deploy:registry:testnet
 ```
 
-## Alur kerja
+## Workflow
 
 ```bash
-# 1. Pecah model jadi shard + hash (+ upload IPFS bila PINATA_JWT diisi)
+# 1. Split the model into shards + hash (+ IPFS upload when PINATA_JWT is set)
 python3 scripts/shard_pipeline.py model.bin --shards 8 --difficulty 20
 
-# 2. Deploy contract
+# 2. Deploy the contract
 npx hardhat run scripts/deploy_contract.js --network opbnb
 
-# 3. Daftarkan shard
+# 3. Register the shards
 npx hardhat run scripts/add_shards.js --network opbnb
 
-# 4. Rekonstruksi model dari CID Pinata dan verifikasi hash
+# 4. Reconstruct the model from Pinata CIDs and verify the hash
 python3 scripts/assemble_shards.py --refresh
 
-# 5. Komunitas mining
+# 5. Community mining
 cd miner && npm install
-export PRIVATE_KEY=<private-key-miner-lokal>
+export PRIVATE_KEY=<local-miner-private-key>
 node mine.js --contract <CONTRACT_ADDRESS>
 
-# 6. Jalankan inference dari model hasil rekonstruksi
+# 6. Run inference from the reconstructed model
 cd ..
-MODEL_PATH=shards/model_reconstructed.gguf npm run node:inference -- "Jelaskan blockchain dalam satu kalimat"
+MODEL_PATH=shards/model_reconstructed.gguf npm run node:inference -- "Explain blockchain in one sentence"
 ```
 
-### Demo mining publik
+### Public mining demo
 
-Contract demo yang sudah live:
+The live demo contract:
 
 ```text
 AIShardUnlock: 0x8D34729c9802F388b88e18f34B23EEb8fA9B859b
@@ -153,59 +156,58 @@ Demo shard   : 9
 Difficulty   : 16
 ```
 
-Perintah lengkap untuk peserta ada di [`miner/README.md`](miner/README.md).
-Peserta membutuhkan Node.js, `npm install`, wallet sendiri, dan sedikit BNB
-opBNB untuk gas. Mining dilakukan lokal; hanya transaksi proof yang masuk
-blockchain.
+Full instructions for participants are in [`miner/README.md`](miner/README.md).
+Participants need Node.js, `npm install`, their own wallet, and a small amount of
+opBNB BNB for gas. Mining happens locally; only the proof transaction goes on-chain.
 
-Contract `InferenceQuorum` memakai fee `0.0001 BNB` per request: 10% untuk
-platform dan 90% dibagi rata ke semua miner yang output-nya cocok dengan
-output pemenang. Miner mengambil `claimShare(requestId)`; platform memakai
-`claim()`. Proof miner terikat ke request, output, address miner, dan nonce.
-Tidak ada sweep, sehingga reward miner yang tidak pernah di-claim membeku
-permanen. Difficulty Proof default `16` dan dapat diubah lewat usulan on-chain
-(3 usulan unik dengan nilai sama mengaktifkannya); nilai `≥ 50` ditandai tier
-eksklusif.
+The `InferenceQuorum` contract charges a fee of `0.0001 BNB` per request: 10% for
+the platform and 90% split equally among all miners whose output matches the
+winning output. Miners call `claimShare(requestId)`; the platform uses `claim()`.
+Miner proof is bound to the request, the output, the miner address, and the nonce.
+There is no sweep, so an unclaimed miner reward freezes permanently. Default Proof
+of Work difficulty is `16` and can be changed through on-chain proposals (3 unique
+proposals with the same value activate it); values `≥ 50` are flagged as an
+exclusive tier.
 
-Shard `8` sudah dibuka saat uji end-to-end. Shard `9` adalah challenge publik
-yang sedang tersedia dan masih terkunci.
+Shard `8` was already unlocked during end-to-end testing. Shard `9` is the public
+challenge currently available and still locked.
 
-`assemble_shards.py` mengunduh setiap CID melalui gateway Pinata, memeriksa
-SHA-256 setiap shard, menggabungkannya berdasarkan `shardId`, lalu memeriksa
-hash model akhir terhadap metadata model.
+`assemble_shards.py` downloads each CID through the Pinata gateway, checks the
+SHA-256 of every shard, merges them by `shardId`, then checks the final model hash
+against the model metadata.
 
-## Aturan proof
+## Proof rule
 
-Proof valid bila:
+A proof is valid when:
 
 ```
 keccak256(abi.encodePacked(shardId, nonce)) < 2^256 >> difficulty
 ```
 
-`2^difficulty` = rata-rata jumlah nonce yang harus dicoba. `difficulty 20` ≈ 1 juta.
+`2^difficulty` = average number of nonces that must be tried. `difficulty 20` ≈ 1 million.
 
-## Batasan yang disengaja
+## Deliberate limitations
 
-- **Governance punya jalur emergency.** Kalau tiga pengusul tidak pernah tercapai,
-  owner atau miner terdaftar dapat mengusulkan difficulty baru yang aktif 7 hari
-  kemudian dan dapat dieksekusi **siapa pun**. Owner tidak dapat mengubah
-  difficulty secara sepihak, dan jaringan tidak dapat terkunci selamanya.
-- **Belum ada anti-sybil.** Satu orang bisa mengirim banyak output dari banyak
-  wallet lalu ikut mengusulkan difficulty. Yang menutup ini adalah stake yang
-  hilang ketika miner mengirim claim palsu, dan itu belum ada.
-- **Tidak ada sweep.** Reward miner yang tidak pernah diklaim akan membeku
-  permanen di dalam contract, bukan kembali ke platform.
-- **Enkripsi shard bersifat naratif.** Shard dipublikasikan di IPFS; "unlock"
-  menggerakkan narasi/pesan AI on-chain, **bukan** membuka rahasia kriptografis.
-  Jangan mengklaim model ini rahasia.
-- Tidak ada anti-sybil bawaan: satu wallet bisa menyapu semua shard. Tambahkan
-  time-gate atau batas per-address bila perlu.
-- Pesan AI disimpan sebagai event log, bukan storage — murah, tapi hanya bisa
-  dibaca lewat `eth_getLogs`, bukan `view`.
+- **Governance has an emergency path.** If three proposers are never reached, the
+  owner or a registered miner can propose a new difficulty that becomes active 7
+  days later and can be executed by **anyone**. The owner cannot change difficulty
+  unilaterally, and the network can never be locked forever.
+- **No anti-sybil yet.** One person can submit many outputs from many wallets and
+  then take part in difficulty proposals. What closes this is stake that is lost
+  when a miner submits a false claim, and that does not exist yet.
+- **No sweep.** A miner reward that is never claimed freezes permanently inside the
+  contract instead of returning to the platform.
+- **Shard encryption is narrative.** Shards are published on IPFS; "unlocking" drives
+  an on-chain narrative/message, it does **not** open a cryptographic secret. Do not
+  claim this model is secret.
+- No built-in anti-sybil: a single wallet can sweep all shards. Add a time-gate or
+  a per-address limit if needed.
+- AI messages are stored as event logs, not storage — cheap, but readable only via
+  `eth_getLogs`, not `view`.
 
-## Output tunggal: blockchain
+## Single output: the blockchain
 
-Pesan AI dibaca dari event `ShardUnlocked` di explorer opBNB:
+AI messages are read from `ShardUnlocked` events in the opBNB explorer:
 
 ```
 https://opbnb.bscscan.com/address/<CONTRACT_ADDRESS>#events

@@ -27,13 +27,13 @@ function loadManifest() {
     if (!manifest[field]) throw new Error(`Field manifest kosong: ${field}`);
   }
   if (!/^0x[0-9a-fA-F]{64}$/.test(manifest.sha256)) {
-    throw new Error("sha256 harus berupa bytes32 hex dengan format 0x + 64 karakter hex");
+    throw new Error("sha256 must be bytes32 hex in the format 0x + 64 hex characters");
   }
   if (
     manifest.cid.includes("REPLACE") ||
     !/^(bafy|Qm)[a-zA-Z0-9]+$/.test(manifest.cid)
   ) {
-    throw new Error("cid model tampaknya belum diisi dengan CID IPFS yang valid");
+    throw new Error("the model cid appears not to be filled in with a valid IPFS CID");
   }
   return { path, manifest };
 }
@@ -46,7 +46,7 @@ async function main() {
     }
     const version = Number(process.env.ACTIVATE_VERSION);
     if (!Number.isInteger(version) || version < 1) {
-      throw new Error("ACTIVATE_VERSION harus berupa nomor versi positif");
+      throw new Error("ACTIVATE_VERSION must be a positive version number");
     }
     const deployment = JSON.parse(fs.readFileSync(deploymentPath, "utf8"));
     const registry = new ethers.Contract(
@@ -56,7 +56,7 @@ async function main() {
     );
     const tx = await registry.activateModel(version);
     await tx.wait();
-    console.log(`Model versi ${version} aktif`);
+    console.log(`Model version ${version} active`);
     console.log(`Transaction: ${tx.hash}`);
     return;
   }
@@ -91,16 +91,16 @@ async function main() {
     })
     .find((event) => event?.name === "ModelRegistered");
 
-  if (!registered) throw new Error("Event ModelRegistered tidak ditemukan");
+  if (!registered) throw new Error("ModelRegistered event not found");
   const version = registered.args.version;
-  console.log(`Model terdaftar sebagai versi ${version}`);
+  console.log(`Model registered as version ${version}`);
 
   if (process.env.ACTIVATE_MODEL === "true") {
     const activationTx = await registry.activateModel(version);
     await activationTx.wait();
-    console.log(`Model versi ${version} aktif`);
+    console.log(`Model version ${version} active`);
   } else {
-    console.log("Model belum diaktifkan. Set ACTIVATE_MODEL=true jika sudah ditinjau.");
+    console.log("Model not activated yet. Set ACTIVATE_MODEL=true once it has been reviewed.");
   }
 }
 

@@ -9,7 +9,7 @@ if (
   TESTNET_PRIVATE_KEY &&
   MAINNET_PRIVATE_KEY.toLowerCase() === TESTNET_PRIVATE_KEY.toLowerCase()
 ) {
-  console.warn("Peringatan: wallet mainnet dan testnet memakai private key yang sama.");
+  console.warn("Warning: the mainnet and testnet wallets use the same private key.");
 }
 
 module.exports = {

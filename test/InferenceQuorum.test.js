@@ -105,7 +105,7 @@ describe("InferenceQuorum submitOutput", function () {
 
   it("records one submission per node and updates tally", async function () {
     const { quorum, node } = await createRequest();
-    const output = "Blockchain adalah buku besar digital.";
+    const output = "Blockchain is a digital ledger.";
     const outputHash = ethers.keccak256(ethers.toUtf8Bytes(output));
 
     const nonce = findClaimNonce(1, output, node.address);
@@ -179,7 +179,7 @@ describe("InferenceQuorum finalize", function () {
     const deadline = (await ethers.provider.getBlock("latest")).timestamp + 3600;
 
     await quorum.connect(other).createRequest(1, prompt, 1, deadline, { value: 1000n });
-    const output = "Blockchain adalah buku besar terdistribusi.";
+    const output = "Blockchain is a distributed ledger.";
     const nonce = findClaimNonce(1, output, node.address);
     await quorum.connect(node).submitOutput(1, output, nonce);
     await quorum.connect(other).finalize(1);
@@ -447,7 +447,7 @@ describe("InferenceQuorum emergency difficulty", function () {
     await ethers.provider.send("evm_mine");
     await quorum.executeDifficulty(1);
     expect(await quorum.difficultyFor(1)).to.equal(30n);
-    // owner hanya satu pengusul tersisa, consensus 3-suara tidak dapat mencapai kuorum
+    // the owner is the only remaining proposer, so the 3-vote consensus cannot reach quorum
     await quorum.connect(owner).proposeDifficulty(1, 16);
     expect(await quorum.difficultyFor(1)).to.equal(30n);
   });

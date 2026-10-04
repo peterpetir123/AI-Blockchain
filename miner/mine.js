@@ -1,17 +1,18 @@
 #!/usr/bin/env node
 /**
- * Miner untuk AIShardUnlock (opBNB).
+ * Miner for AIShardUnlock (opBNB).
  *
- * Mencari nonce sehingga keccak256(shardId, nonce) < 2^256 >> difficulty,
- * lalu submit ke contract. Nonce dicari LOKAL, hanya tx final yang dikirim.
+ * Searches for a nonce such that keccak256(shardId, nonce) < 2^256 >> difficulty,
+ * then submits it to the contract. The nonce is searched LOCALLY; only the final
+ * transaction is sent.
  *
- * Pemakaian:
- *   node mine.js --contract 0xABC...                  # sapu semua shard terkunci
- *   node mine.js --contract 0xABC... --shard 2        # hanya shard 2
- *   node mine.js --selftest                           # cek logika pencarian nonce
+ * Usage:
+ *   node mine.js --contract 0xABC...                  # sweep all locked shards
+ *   node mine.js --contract 0xABC... --shard 2        # only shard 2
+ *   node mine.js --selftest                           # check the nonce search logic
  *
  * Env:
- *   PRIVATE_KEY  wallet ber-BNB untuk gas (WAJIB untuk submit)
+ *   PRIVATE_KEY  wallet with BNB for gas (REQUIRED to submit)
  *   RPC_URL      default https://opbnb-rpc.publicnode.com
  */
 const { JsonRpcProvider, Wallet, Contract, solidityPackedKeccak256, formatEther } = require("ethers");
@@ -63,16 +64,16 @@ async function main() {
   const rpc = arg("rpc", process.env.RPC_URL || "https://opbnb-rpc.publicnode.com");
   const provider = new JsonRpcProvider(rpc);
   const pk = process.env.PRIVATE_KEY;
-  if (!pk) throw new Error("PRIVATE_KEY belum di-set");
+  if (!pk) throw new Error("PRIVATE_KEY is not set");
   const wallet = new Wallet(pk, provider);
   const contract = new Contract(address, ABI, wallet);
 
   const net = await provider.getNetwork();
   const balance = await provider.getBalance(wallet.address);
-  console.log(`Jaringan : ${net.name} (chainId ${net.chainId})`);
+  console.log(`Network  : ${net.name} (chainId ${net.chainId})`);
   console.log(`Miner    : ${wallet.address}`);
-  console.log(`Saldo    : ${formatEther(balance)} BNB`);
-  if (balance === 0n) throw new Error("saldo 0 BNB, isi dulu untuk gas");
+  console.log(`Balance  : ${formatEther(balance)} BNB`);
+  if (balance === 0n) throw new Error("balance 0 BNB, fund it first for gas");
 
   const count = Number(await contract.shardCount());
   const only = arg("shard", null);
@@ -81,20 +82,20 @@ async function main() {
   for (const id of ids) {
     const s = await contract.shards(id);
     if (s.unlocked) {
-      console.log(`shard ${id}: sudah terbuka, lewati`);
+      console.log(`shard ${id}: already unlocked, skipping`);
       continue;
     }
-    console.log(`shard ${id}: mencari nonce (difficulty ${s.difficulty})...`);
+    console.log(`shard ${id}: searching for a nonce (difficulty ${s.difficulty})...`);
     const t0 = Date.now();
     const nonce = findNonce(id, Number(s.difficulty), (n) =>
-      process.stdout.write(`\r  ${n} nonce dicoba...`)
+      process.stdout.write(`\r  ${n} nonces tried...`)
     );
-    console.log(`\r  ketemu nonce=${nonce} dalam ${((Date.now() - t0) / 1000).toFixed(1)}s`);
+    console.log(`\r  found nonce=${nonce} in ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 
     const tx = await contract.submitProof(id, nonce);
-    console.log(`  tx terkirim: ${tx.hash}`);
+    console.log(`  tx sent: ${tx.hash}`);
     await tx.wait();
-    console.log(`  shard ${id} TERBUKA.`);
+    console.log(`  shard ${id} UNLOCKED.`);
   }
 }
 

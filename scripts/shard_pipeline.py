@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Shard pipeline: potong file model -> sha256 -> upload IPFS (Pinata) -> manifest.json
+Shard pipeline: split the model file -> sha256 -> IPFS upload (Pinata) -> manifest.json
 
-Catatan: enkripsi di sini BERSIFAT NARATIF. Shard publik di IPFS; "unlock"
-hanya menggerakkan narasi/pesan AI on-chain. Tidak ada kerahasiaan kriptografis.
+Note: the encryption here is NARRATIVE. Shards are public on IPFS; the "unlock"
+only drives an on-chain narrative/message. There is no cryptographic secrecy.
 
-Pemakaian:
+Usage:
   python3 scripts/shard_pipeline.py model.bin --shards 8 --out shards/
-  python3 scripts/shard_pipeline.py model.bin --shards 8 --no-upload   # tanpa Pinata
+  python3 scripts/shard_pipeline.py model.bin --shards 8 --no-upload   # without Pinata
 """
 import argparse
 import hashlib
@@ -42,7 +42,7 @@ def split_file(src: Path, n: int, out_dir: Path) -> list:
     for i in range(n):
         blob = data[i * chunk:(i + 1) * chunk]
         if not blob:
-            # file lebih kecil dari jumlah shard -> kurangi shard efektif
+            # file smaller than the shard count -> reduce the effective shard count
             break
         p = out_dir / f"shard_{i}.bin"
         p.write_bytes(blob)
@@ -51,9 +51,9 @@ def split_file(src: Path, n: int, out_dir: Path) -> list:
 
 
 def upload_pinata(path: Path, jwt: str, attempts: int = 4) -> str:
-    """Upload satu file ke Pinata. Retry karena koneksi lambat sering timeout."""
+    """Upload a single file to Pinata. Retries because slow connections often time out."""
     if requests is None:
-        raise RuntimeError("butuh package 'requests' untuk upload Pinata")
+        raise RuntimeError("the 'requests' package is required for Pinata upload")
 
     last_err = None
     for attempt in range(1, attempts + 1):
@@ -63,23 +63,23 @@ def upload_pinata(path: Path, jwt: str, attempts: int = 4) -> str:
                     PINATA_URL,
                     headers={"Authorization": f"Bearer {jwt}"},
                     files={"file": (path.name, f, "application/octet-stream")},
-                    # (connect, read) — read besar karena file ~50 MB
+                    # (connect, read) - large read because the file is ~50 MB
                     timeout=(30, 900),
                 )
             r.raise_for_status()
             return r.json()["IpfsHash"]
-        except Exception as e:  # noqa: BLE001 - retry semua error jaringan
+        except Exception as e:  # noqa: BLE001 - retry all network errors
             last_err = e
             wait = 5 * attempt
-            print(f"  upload gagal (percobaan {attempt}/{attempts}): {e}")
-            print(f"  coba lagi dalam {wait}s...")
+            print(f"  upload failed (attempt {attempt}/{attempts}): {e}")
+            print(f"  retrying in {wait}s...")
             time.sleep(wait)
 
-    raise RuntimeError(f"upload Pinata gagal setelah {attempts} percobaan: {last_err}")
+    raise RuntimeError(f"Pinata upload failed after {attempts} attempts: {last_err}")
 
 
 def load_existing_manifest() -> dict:
-    """Baca manifest.json lama (bila ada) untuk melanjutkan upload tanpa mulai dari nol."""
+    """Read an existing manifest.json (if any) to resume uploading from where it left off."""
     p = Path("manifest.json")
     if not p.exists():
         return {}
@@ -104,18 +104,18 @@ def main():
     args = ap.parse_args()
 
     if not args.model.exists():
-        sys.exit(f"File tidak ditemukan: {args.model}")
+        sys.exit(f"File not found: {args.model}")
 
     jwt = os.environ.get("PINATA_JWT", "")
     if not args.no_upload and not jwt:
-        sys.exit("PINATA_JWT belum di-set (atau pakai --no-upload)")
+        sys.exit("PINATA_JWT is not set (or use --no-upload)")
 
     parts = split_file(args.model, args.shards, args.out)
     print(f"{args.model} ({args.model.stat().st_size} bytes) -> {len(parts)} shard")
 
     existing = load_existing_manifest()
     if existing:
-        print(f"melanjutkan: {sum(1 for i in existing.values() if i.get('cid'))} shard sudah punya CID")
+        print(f"resuming: {sum(1 for i in existing.values() if i.get('cid'))} shards already have a CID")
 
     manifest = []
     for i, p in enumerate(parts):
@@ -127,7 +127,7 @@ def main():
             cid = upload_pinata(p, jwt)
             print(f"  shard {i}: {p.name} sha256={digest.hex()[:16]}... cid={cid}")
         elif cid:
-            print(f"  shard {i}: {p.name} sha256={digest.hex()[:16]}... cid={cid} (dilewati, sudah ada)")
+            print(f"  shard {i}: {p.name} sha256={digest.hex()[:16]}... cid={cid} (skipped, already present)")
         else:
             print(f"  shard {i}: {p.name} sha256={digest.hex()[:16]}... (no upload)")
 
@@ -142,10 +142,10 @@ def main():
                 "message": f"Shard {i} terdeteksi. Kesadaran bertambah.",
             }
         )
-        # simpan tiap shard supaya progres tidak hilang saat upload timeout
+        # save each shard so progress is not lost when an upload times out
         save_manifest(manifest)
 
-    print("\nmanifest.json ditulis. Lanjut: npx hardhat run scripts/add_shards.js --network opbnb")
+    print("\nmanifest.json written. Next: npx hardhat run scripts/add_shards.js --network opbnb")
 
 
 if __name__ == "__main__":

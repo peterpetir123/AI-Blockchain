@@ -4,7 +4,7 @@ const fs = require("fs");
 async function main() {
   const manifestPath = "manifest.json";
   if (!fs.existsSync(manifestPath)) {
-    throw new Error("manifest.json tidak ada. Jalankan scripts/shard_pipeline.py dulu.");
+    throw new Error("manifest.json not found. Run scripts/shard_pipeline.py first.");
   }
   const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
   const deployment = JSON.parse(fs.readFileSync("deployment.json", "utf8"));
@@ -15,7 +15,7 @@ async function main() {
   );
 
   const before = await contract.shardCount();
-  console.log(`shardCount sebelum: ${before}`);
+  console.log(`shardCount before: ${before}`);
 
   for (const s of manifest) {
     if (!s.cid) {
@@ -26,7 +26,7 @@ async function main() {
       s.cid,
       s.sha256,
       s.difficulty ?? 20,
-      s.message ?? `Shard ${s.shardId} terbuka.`
+      s.message ?? `Shard ${s.shardId} unlocked.`
     );
     await tx.wait();
     console.log(`addShard(${s.shardId}) -> tx ${tx.hash}`);

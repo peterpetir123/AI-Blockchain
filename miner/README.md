@@ -1,62 +1,61 @@
 # AI Shard Miner
 
-Mencari nonce untuk membuka shard AI di contract `AIShardUnlock` (opBNB).
-Nonce dicari **lokal**; hanya transaksi final yang dikirim ke jaringan.
+Searches for a nonce to unlock an AI shard on the `AIShardUnlock` contract (opBNB).
+The nonce is searched **locally**; only the final transaction is sent to the network.
 
-## Syarat
+## Requirements
 - Node.js 18+
-- Wallet dengan sedikit **BNB** untuk gas (di opBNB ~0.00000002 BNB per tx)
+- A wallet with a small amount of **BNB** for gas (on opBNB ~0.00000002 BNB per tx)
 
-## Pakai
+## Usage
 ```bash
 npm install
-export PRIVATE_KEY=0x...            # wallet kamu
-node mine.js --contract 0xCONTRACT   # sapu semua shard terkunci
-node mine.js --contract 0xCONTRACT --shard 2   # hanya shard tertentu
-node mine.js --selftest              # cek logika tanpa jaringan
+export PRIVATE_KEY=0x...            # your wallet
+node mine.js --contract 0xCONTRACT   # sweep all locked shards
+node mine.js --contract 0xCONTRACT --shard 2   # only a specific shard
+node mine.js --selftest              # check the logic without network
 ```
 
-## Demo publik opBNB
+## Public opBNB demo
 
-Demo ini tidak memberi reward. Miner hanya menemukan nonce valid dan mengirim
-satu transaksi unlock; siapa yang lebih dulu mengirim proof valid akan membuka
-shard tersebut.
+This demo gives no reward. A miner only finds a valid nonce and sends a single
+unlock transaction; whoever submits a valid proof first will unlock that shard.
 
 ```bash
-git clone <URL_REPO_PUBLIK> ai-agent
+git clone <PUBLIC_REPO_URL> ai-agent
 cd ai-agent/miner
 npm install
 npm run selftest
 
-export PRIVATE_KEY=0xPRIVATE_KEY_WALLET_MINER_SENDIRI
+export PRIVATE_KEY=0xPRIVATE_KEY_WALLET_YOUR_OWN
 export RPC_URL=https://opbnb-rpc.publicnode.com
 node mine.js \
   --contract 0x8D34729c9802F388b88e18f34B23EEb8fA9B859b \
   --shard 9
 ```
 
-Wallet miner harus punya sedikit BNB asli di opBNB untuk gas. Jangan pernah
-memakai private key deployer atau membagikan private key ke orang lain.
+The miner wallet needs a small amount of real BNB on opBNB for gas. Never use the
+deployer private key, and never share your private key with anyone else.
 
-Jika shard 8 sudah dibuka miner lain, program akan gagal/menemukan status
-sudah terbuka. Itu normal untuk challenge kompetitif.
+If shard 8 has already been unlocked by another miner, the program will fail or
+find it already unlocked. That is normal for a competitive challenge.
 
-Shard `8` sudah dibuka pada transaksi uji. Challenge publik aktif adalah shard
-`9`; siapa yang lebih dulu mengirim proof valid akan membukanya.
+Shard `8` was unlocked during test transactions. The active public challenge is
+shard `9`; whoever submits a valid proof first will unlock it.
 
-Env opsional: `RPC_URL` (default `https://opbnb-rpc.publicnode.com`),
-`CONTRACT_ADDRESS` (biar tak perlu `--contract`).
+Optional env vars: `RPC_URL` (default `https://opbnb-rpc.publicnode.com`),
+`CONTRACT_ADDRESS` (so you don't need `--contract`).
 
-## Cara kerja
-Proof valid bila:
+## How it works
+A proof is valid when:
 
 ```
 keccak256(abi.encodePacked(shardId, nonce)) < 2^256 >> difficulty
 ```
 
-Semakin tinggi `difficulty`, semakin banyak nonce dicoba (2^difficulty rata-rata).
-`difficulty 20` ≈ 1 juta percobaan; naikkan/rendahkan sesuai keinginan pembuat shard.
+The higher the `difficulty`, the more nonces must be tried (2^difficulty on average).
+`difficulty 20` ≈ 1 million attempts; raise/lower it as the shard creator sees fit.
 
-## Catatan
-Enkripsi shard bersifat **naratif** — shard publik di IPFS. Unlock di sini
-menggerakkan narasi/pesan AI on-chain, bukan membuka rahasia kriptografis.
+## Notes
+Shard encryption is **narrative** — shards are public on IPFS. The unlock here
+drives an on-chain narrative/message, it does not open a cryptographic secret.

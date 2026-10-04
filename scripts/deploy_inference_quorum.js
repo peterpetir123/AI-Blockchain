@@ -10,17 +10,17 @@ async function main() {
 
   if (!registryAddress || !ethers.isAddress(registryAddress)) {
     throw new Error(
-      "MODEL_REGISTRY_ADDRESS harus berisi address ModelRegistry pada network target"
+      "MODEL_REGISTRY_ADDRESS must contain the ModelRegistry address on the target network"
     );
   }
 
-  console.log("Jaringan :", network.name, `(chainId ${network.chainId})`);
+  console.log("Network :", network.name, `(chainId ${network.chainId})`);
   console.log("Deployer:", deployer.address);
-  console.log("Saldo   :", ethers.formatEther(balance));
+  console.log("Balance :", ethers.formatEther(balance));
   console.log("Registry:", registryAddress);
 
   if (balance === 0n) {
-    throw new Error("Saldo 0. Isi token gas network target sebelum deploy.");
+    throw new Error("Balance 0. Fund the target network gas token before deploying.");
   }
 
   const factory = await ethers.getContractFactory("InferenceQuorum");

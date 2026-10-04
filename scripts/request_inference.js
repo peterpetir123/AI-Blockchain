@@ -31,14 +31,14 @@ function readJson(path) {
 async function main() {
   const prompt = process.argv.slice(2).join(" ").trim();
   if (!prompt) {
-    throw new Error('Pakai: npm run request:inference -- "prompt"');
+    throw new Error('Usage: npm run request:inference -- "prompt"');
   }
 
   const deploymentPath = process.env.QUORUM_DEPLOYMENT || "inference-quorum-deployment.json";
   const deployment = readJson(deploymentPath);
   const provider = new JsonRpcProvider(process.env.RPC_URL || "https://opbnb-rpc.publicnode.com");
   const privateKey = process.env.PRIVATE_KEY;
-  if (!privateKey) throw new Error("PRIVATE_KEY requester belum di-set");
+  if (!privateKey) throw new Error("requester PRIVATE_KEY is not set");
   const wallet = new Wallet(privateKey, provider);
   const quorumContract = new Contract(deployment.quorumAddress, QUORUM_ABI, wallet);
   const registry = new Contract(deployment.modelRegistryAddress, REGISTRY_ABI, provider);
@@ -48,11 +48,11 @@ async function main() {
   const timeoutSeconds = BigInt(process.env.REQUEST_TIMEOUT_SECONDS || "1800");
   const pollMs = Number(process.env.POLL_MS || "10000");
   if (quorum < 1n || timeoutSeconds < 1n || !Number.isSafeInteger(pollMs) || pollMs < 1000) {
-    throw new Error("INFERENCE_QUORUM, REQUEST_TIMEOUT_SECONDS, atau POLL_MS tidak valid");
+    throw new Error("INFERENCE_QUORUM, REQUEST_TIMEOUT_SECONDS, or POLL_MS are invalid");
   }
 
   const modelVersion = await registry.activeModelVersion();
-  if (modelVersion === 0n) throw new Error("ModelRegistry belum memiliki model aktif");
+  if (modelVersion === 0n) throw new Error("ModelRegistry has no active model yet");
   const deadline = BigInt(Math.floor(Date.now() / 1000)) + timeoutSeconds;
   const inputHash = keccak256(toUtf8Bytes(prompt));
 
@@ -70,7 +70,7 @@ async function main() {
       try { return quorumContract.interface.parseLog(log); } catch { return null; }
     })
     .find((parsed) => parsed?.name === "RequestCreated");
-  if (!event) throw new Error("RequestCreated tidak ditemukan dalam receipt");
+  if (!event) throw new Error("RequestCreated not found in the receipt");
 
   const requestId = event.args.requestId;
   console.log(`Request ID: ${requestId}`);
@@ -80,7 +80,7 @@ async function main() {
     const request = await quorumContract.requests(requestId);
     if (request.winningOutput !== `0x${"00".repeat(32)}`) break;
     if (BigInt(Math.floor(Date.now() / 1000)) >= deadline) {
-      throw new Error(`Request ${requestId} timeout sebelum quorum tercapai`);
+      throw new Error(`Request ${requestId} timed out before quorum was reached`);
     }
     await new Promise((resolve) => setTimeout(resolve, pollMs));
   }
@@ -89,7 +89,7 @@ async function main() {
   console.log(`Finalize tx: ${finalizeTx.hash}`);
   await finalizeTx.wait();
   if (!(await quorumContract.isVerified(requestId))) {
-    throw new Error(`Request ${requestId} belum terverifikasi`);
+    throw new Error(`Request ${requestId} is not verified yet`);
   }
 
   const request = await quorumContract.requests(requestId);

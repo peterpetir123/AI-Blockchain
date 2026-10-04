@@ -40,7 +40,7 @@ def download(cid: str, destination: Path, attempts: int = 4) -> None:
             if attempt == attempts:
                 raise RuntimeError(f"gagal mengunduh {cid}: {error}") from error
             wait = attempt * 5
-            print(f"  download gagal ({attempt}/{attempts}), ulangi dalam {wait}s")
+            print(f"  download failed ({attempt}/{attempts}), retrying in {wait}s")
             time.sleep(wait)
 
 
@@ -48,15 +48,15 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--manifest", type=Path, default=Path("manifest.json"))
     parser.add_argument("--out", type=Path, default=Path("shards/model_reconstructed.gguf"))
-    parser.add_argument("--refresh", action="store_true", help="download ulang walau file shard sudah ada")
+    parser.add_argument("--refresh", action="store_true", help="download again even if the shard file already exists")
     args = parser.parse_args()
 
     if not args.manifest.exists():
-        sys.exit(f"Manifest tidak ditemukan: {args.manifest}")
+        sys.exit(f"Manifest not found: {args.manifest}")
 
     manifest = json.loads(args.manifest.read_text())
     if not isinstance(manifest, list) or not manifest:
-        sys.exit("manifest.json harus berupa daftar shard yang tidak kosong")
+        sys.exit("manifest.json must be a non-empty shard list")
     manifest = sorted(manifest, key=lambda item: item["shardId"])
     args.out.parent.mkdir(parents=True, exist_ok=True)
 
@@ -66,21 +66,21 @@ def main() -> None:
         cid = item.get("cid", "")
         expected = item["sha256"].lower()
         if not cid:
-            sys.exit(f"Shard {shard_id} tidak memiliki CID")
+            sys.exit(f"Shard {shard_id} has no CID")
 
         path = args.out.parent / f"downloaded_shard_{shard_id}.bin"
         if args.refresh or not path.exists():
-            print(f"Shard {shard_id}: download dari Pinata ({cid})")
+            print(f"Shard {shard_id}: downloading from Pinata ({cid})")
             download(cid, path)
         else:
-            print(f"Shard {shard_id}: memakai file unduhan yang sudah ada")
+            print(f"Shard {shard_id}: reusing the existing download")
 
         actual = sha256_file(path).lower()
         if actual != expected:
             path.unlink(missing_ok=True)
-            raise RuntimeError(f"hash shard {shard_id} berbeda: lokal {actual}, manifest {expected}")
+            raise RuntimeError(f"shard {shard_id} hash mismatch: local {actual}, manifest {expected}")
         if path.stat().st_size != item["bytes"]:
-            raise RuntimeError(f"ukuran shard {shard_id} berbeda")
+            raise RuntimeError(f"shard {shard_id} size mismatch")
         print(f"  OK sha256={actual} bytes={path.stat().st_size}")
         verified_paths.append(path)
 
@@ -96,7 +96,7 @@ def main() -> None:
     print(f"\nFile hasil: {args.out}")
     print(f"Ukuran   : {args.out.stat().st_size} bytes")
     print(f"SHA-256  : {final_hash}")
-    print("Rekonstruksi selesai.")
+    print("Reconstruction complete.")
 
 
 if __name__ == "__main__":

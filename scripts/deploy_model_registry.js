@@ -6,12 +6,12 @@ async function main() {
   const network = await ethers.provider.getNetwork();
   const balance = await ethers.provider.getBalance(deployer.address);
 
-  console.log("Jaringan:", network.name, `(chainId ${network.chainId})`);
+  console.log("Network:", network.name, `(chainId ${network.chainId})`);
   console.log("Deployer:", deployer.address);
-  console.log("Saldo   :", ethers.formatEther(balance), Number(network.chainId) === 97 ? "tBNB" : "BNB");
+  console.log("Balance :", ethers.formatEther(balance), Number(network.chainId) === 97 ? "tBNB" : "BNB");
 
   if (balance === 0n) {
-    throw new Error("Saldo 0. Isi token gas jaringan target sebelum deploy.");
+    throw new Error("Balance 0. Fund the target network gas token before deploying.");
   }
 
   const factory = await ethers.getContractFactory("ModelRegistry");
@@ -36,7 +36,7 @@ async function main() {
   );
 
   console.log("MODEL_REGISTRY_ADDRESS =", address);
-  console.log("Disimpan ke", deploymentPath);
+  console.log("Saved to", deploymentPath);
 }
 
 main().catch((error) => {

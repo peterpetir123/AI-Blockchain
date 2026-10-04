@@ -6,21 +6,21 @@ async function main() {
 
   if (network.chainId !== expectedChainId) {
     throw new Error(
-      `Jaringan salah: chainId ${network.chainId}. Jalankan dengan --network bscTestnet.`
+      `Wrong network: chainId ${network.chainId}. Run with --network bscTestnet.`
     );
   }
 
   const signers = await ethers.getSigners();
   if (signers.length === 0) {
-    throw new Error("TESTNET_PRIVATE_KEY belum diisi di .env.");
+    throw new Error("TESTNET_PRIVATE_KEY is not set in .env.");
   }
   const [wallet] = signers;
   const balance = await ethers.provider.getBalance(wallet.address);
 
-  console.log("Jaringan:", network.name, `(chainId ${network.chainId})`);
-  console.log("Alamat :", wallet.address);
-  console.log("Saldo  :", ethers.formatEther(balance), "tBNB");
-  console.log(balance > 0n ? "Status : siap untuk deploy testnet" : "Status : perlu tBNB dari faucet");
+  console.log("Network:", network.name, `(chainId ${network.chainId})`);
+  console.log("Address:", wallet.address);
+  console.log("Balance:", ethers.formatEther(balance), "tBNB");
+  console.log(balance > 0n ? "Status : ready for testnet deploy" : "Status : needs tBNB from the faucet");
 }
 
 main().catch((error) => {

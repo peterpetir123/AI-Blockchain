@@ -4,7 +4,7 @@ const DEMO = {
   cid: "QmTfyZqx1bpoKs3ow5YWiyUcKkcMdCXkTbDHAhmSBUoeph",
   hash: "0x4f0295ce1b3c6fe016687774e720aea0ca351e02db5d68137f4249c3ef77f78d",
   difficulty: 16,
-  message: "Demo public: temukan nonce dan buka shard ini.",
+  message: "Public demo: find the nonce and unlock this shard.",
 };
 
 async function main() {

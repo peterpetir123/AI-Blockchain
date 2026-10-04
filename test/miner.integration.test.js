@@ -3,11 +3,11 @@ const { ethers } = require("hardhat");
 const { findNonce } = require("../miner/mine.js");
 
 /**
- * Test lintas-komponen: nonce hasil miner HARUS diterima validasi on-chain.
- * Kalau ini lulus, syarat proof di miner dan di contract identik.
+ * Cross-component test: a nonce produced by the miner MUST be accepted by on-chain validation.
+ * If this passes, the proof conditions in the miner and in the contract are identical.
  */
-describe("Integrasi miner <-> contract", function () {
-  it("nonce dari mine.js diterima submitProof untuk berbagai difficulty", async function () {
+describe("miner <-> contract integration", function () {
+  it("a nonce from mine.js is accepted by submitProof across difficulties", async function () {
     const [owner, miner] = await ethers.getSigners();
     const factory = await ethers.getContractFactory("AIShardUnlock");
     const contract = await factory.deploy();
@@ -25,7 +25,7 @@ describe("Integrasi miner <-> contract", function () {
     }
   });
 
-  it("nonce+1 (tidak valid) ditolak", async function () {
+  it("nonce+1 (invalid) is rejected", async function () {
     const [owner, miner] = await ethers.getSigners();
     const factory = await ethers.getContractFactory("AIShardUnlock");
     const contract = await factory.deploy();

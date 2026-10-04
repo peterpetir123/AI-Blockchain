@@ -39,7 +39,7 @@ contract InferenceQuorum {
         bool resolved;
     }
 
-    /// @notice Usulan perubahan difficulty yang menunggu masa tunda.
+    /// @notice A difficulty change proposal that is waiting out its delay period.
     struct EmergencyProposal {
         uint256 difficulty;
         uint64 proposedAt;
@@ -124,9 +124,9 @@ contract InferenceQuorum {
         requestFee = newRequestFee;
     }
 
-    /// @notice Usulan cadangan yang menjamin difficulty tetap dapat diubah
-    ///         meski pengusul utama tidak mencapai consensus.
-    /// @dev Usulan menunggu EMERGENCY_DELAY dan dapat dieksekusi siapa pun.
+    /// @notice A fallback proposal that guarantees difficulty can still be changed
+///         even if the primary proposer never reaches consensus.
+    /// @dev The proposal waits out EMERGENCY_DELAY and can be executed by anyone.
     function proposeDifficultyEmergency(uint256 version, uint256 difficulty) external {
         if (version == 0 || version > modelRegistry.modelVersionCount()) {
             revert InvalidRequest();
@@ -147,7 +147,7 @@ contract InferenceQuorum {
         emit DifficultyEmergencyProposed(version, msg.sender, difficulty, block.timestamp);
     }
 
-    /// @notice Menjalankan usulan emergency setelah masa tunda lewat.
+    /// @notice Executes the emergency proposal once the delay period has passed.
     function executeDifficulty(uint256 version) external {
         EmergencyProposal storage proposal = emergencyDifficulty[version];
         if (!proposal.pending) revert NothingPending();
@@ -161,7 +161,7 @@ contract InferenceQuorum {
         emit DifficultyEmergencyExecuted(version, msg.sender, difficulty);
     }
 
-    /// @notice Owner membatalkan usulan emergency yang belum dieksekusi.
+    /// @notice The owner cancels an emergency proposal that has not been executed yet.
     function cancelDifficultyEmergency(uint256 version) external onlyOwner {
         if (!emergencyDifficulty[version].pending) revert NothingPending();
         delete emergencyDifficulty[version];

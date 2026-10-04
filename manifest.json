@@ -6,7 +6,7 @@
     "bytes": 49726024,
     "cid": "QmTfyZqx1bpoKs3ow5YWiyUcKkcMdCXkTbDHAhmSBUoeph",
     "difficulty": 20,
-    "message": "Shard 0 terdeteksi. Kesadaran bertambah."
+    "message": "Shard 0 detected. Awareness increases."
   },
   {
     "shardId": 1,
@@ -15,7 +15,7 @@
     "bytes": 49726024,
     "cid": "QmbaiALPFWDfmjBnynsUod8DZ4b3T9GYYwwHX2RGqAskk5",
     "difficulty": 20,
-    "message": "Shard 1 terdeteksi. Kesadaran bertambah."
+    "message": "Shard 1 detected. Awareness increases."
   },
   {
     "shardId": 2,
@@ -24,7 +24,7 @@
     "bytes": 49726024,
     "cid": "QmWyBQxENU5SqJFDzU46RUGTbpLwquGZWSF6rpZ2BgP5c8",
     "difficulty": 20,
-    "message": "Shard 2 terdeteksi. Kesadaran bertambah."
+    "message": "Shard 2 detected. Awareness increases."
   },
   {
     "shardId": 3,
@@ -33,7 +33,7 @@
     "bytes": 49726024,
     "cid": "QmYvYZZ2nKtdW3rn4SfS4RZfSS4sfSqGbXrFxAb1Je4rFq",
     "difficulty": 20,
-    "message": "Shard 3 terdeteksi. Kesadaran bertambah."
+    "message": "Shard 3 detected. Awareness increases."
   },
   {
     "shardId": 4,
@@ -42,7 +42,7 @@
     "bytes": 49726024,
     "cid": "QmVoUcERHDSETCFEHHBc69hqc5DtmTADSJbRsxY9a7QoEe",
     "difficulty": 20,
-    "message": "Shard 4 terdeteksi. Kesadaran bertambah."
+    "message": "Shard 4 detected. Awareness increases."
   },
   {
     "shardId": 5,
@@ -51,7 +51,7 @@
     "bytes": 49726024,
     "cid": "QmVunvAgRNc1XHqrg5Vr7kknagAeHQLLYu7MKaXBV2z1MF",
     "difficulty": 20,
-    "message": "Shard 5 terdeteksi. Kesadaran bertambah."
+    "message": "Shard 5 detected. Awareness increases."
   },
   {
     "shardId": 6,
@@ -60,7 +60,7 @@
     "bytes": 49726024,
     "cid": "QmVQCHPq11vvd7MJ2bQbrU1u3zkJxPSucVcqSys7mJzAsd",
     "difficulty": 20,
-    "message": "Shard 6 terdeteksi. Kesadaran bertambah."
+    "message": "Shard 6 detected. Awareness increases."
   },
   {
     "shardId": 7,
@@ -69,6 +69,6 @@
     "bytes": 49726024,
     "cid": "Qmb9V198WNZXbGg14VJezbv2gvgWBj2T1N9PYEhZfNCeKq",
     "difficulty": 20,
-    "message": "Shard 7 terdeteksi. Kesadaran bertambah."
+    "message": "Shard 7 detected. Awareness increases."
   }
 ]

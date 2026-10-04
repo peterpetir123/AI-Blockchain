@@ -8,13 +8,13 @@ typechain-types/
 coverage/
 coverage.json
 shards/
-# Catatan: file berikut SENGAJA ikut di-commit karena isinya data publik
-# (alamat contract, chainId, CID, SHA-256) dan dibutuhkan agar repo bisa
-# dipakai langsung dari clone baru tanpa langkah tambahan:
-#   manifest.json                     → scripts/add_shards.py, assemble_shards.py
-#   model/manifest.json               → node/run_registry_inference.js
-#   model-registry-deployment.json    → node/run_registry_inference.js
-#   deployment.json                   → scripts/add_shards.js
-#   inference-quorum-deployment.json  → node/worker_node.js, request_inference.js
-# Yang tetap di-ignore hanya shards/ (binari ~400 MB, diunduh dari Pinata)
-# dan .env (berisi private key — JANGAN pernah di-commit).
+# Note: the following files are DELIBERATELY committed because they hold public
+# data (contract addresses, chainId, CID, SHA-256) and are needed so the repo can
+# be used straight from a fresh clone with no extra steps:
+#   manifest.json                     -> scripts/assemble_shards.py
+#   model/manifest.json               -> node/run_registry_inference.js
+#   model-registry-deployment.json    -> node/run_registry_inference.js
+#   deployment.json                   -> scripts/add_shards.js
+#   inference-quorum-deployment.json  -> node/worker_node.js, request_inference.js
+# Only shards/ stays ignored (the ~400 MB binary downloaded from Pinata)
+# along with .env (holds a private key - NEVER commit it).

@@ -1,22 +1,22 @@
 # Local AI Node
 
-Node lokal pertama untuk menjalankan model GGUF. Node ini belum membaca
-blockchain atau mengirim transaksi; tujuan tahap ini hanya memastikan model
-benar-benar dapat dijalankan di komputer komunitas.
+The first local node for running a GGUF model. This node does not read the
+blockchain or send transactions; the goal of this stage is only to ensure the
+model can genuinely be run on a community computer.
 
 ## Runtime
 
-Pasang `llama.cpp` dari sumber resminya sehingga tersedia executable `llama-cli`.
-Verifikasi:
+Install `llama.cpp` from its official source so that the `llama-cli` executable
+is available. Verify:
 
 ```bash
 llama-cli --version
 ```
 
-## Dependensi
+## Dependencies
 
-Node di folder ini memakai `ethers` dari `package.json` root, jadi install
-terjadi **sekali di root repo** — bukan di dalam `node/`:
+The node in this folder uses `ethers` from the root `package.json`, so the
+install happens **once at the repo root** — not inside `node/`:
 
 ```bash
 git clone https://github.com/peterpetir123/AI-Blockchain
@@ -24,84 +24,85 @@ cd AI-Blockchain
 npm install
 ```
 
-`node/` tidak punya `package.json` sendiri. Menjalankan `npm install` di dalam
-`node/` tidak akan memasang apa pun.
+`node/` has no `package.json` of its own. Running `npm install` inside `node/`
+will not install anything.
 
-## Jalankan model
+## Run the model
 
 ```bash
 MODEL_PATH=/path/to/model.gguf \
-node node/run_inference.js "Jelaskan apa itu blockchain secara singkat"
+node node/run_inference.js "Explain what blockchain is, briefly"
 ```
 
-Jumlah token default adalah 128. Ubah jika perlu:
+The default token count is 128. Change it if needed:
 
 ```bash
 MAX_TOKENS=256 MODEL_PATH=/path/to/model.gguf \
-node node/run_inference.js "Tulis satu kalimat dalam bahasa Indonesia"
+node node/run_inference.js "Write one sentence in Indonesian"
 ```
 
-Jika executable memiliki nama atau lokasi lain:
+If the executable has a different name or location:
 
 ```bash
 LLAMA_CLI=/path/to/llama-cli MODEL_PATH=/path/to/model.gguf \
 node node/run_inference.js "Halo"
 ```
 
-Model harus berupa file GGUF yang sumber, lisensi, dan hash-nya terdokumentasi.
+The model must be a GGUF file whose source, license, and hash are documented.
 
-## Jalankan inference dengan registry on-chain
+## Run inference with the on-chain registry
 
-Setelah `ModelRegistry` aktif dan `model-registry-deployment.json` tersedia,
-jalankan dari root repo:
+After `ModelRegistry` is active and `model-registry-deployment.json` is
+available, run from the repo root:
 
 ```bash
-MODEL_PATH=/path/ke/model.gguf \
-npm run node:inference -- "Jelaskan blockchain dalam satu kalimat"
+MODEL_PATH=/path/to/model.gguf \
+npm run node:inference -- "Explain blockchain in one sentence"
 ```
 
-Node akan memeriksa versi model aktif, CID, dan SHA-256 sebelum menjalankan
-inference. Setelah output dibuat, node mengirim hash prompt dan output melalui
-`InferenceRecorded` ke registry. Isi prompt/jawaban tidak disimpan on-chain.
+The node checks the active model version, CID, and SHA-256 before running
+inference. After the output is produced, the node sends the prompt and output
+hashes to the registry through `InferenceRecorded`. The prompt/answer content is
+not stored on-chain.
 
-## Worker node tanpa server
+## Serverless worker node
 
-Worker ini hanya membaca blockchain melalui RPC, menjalankan model secara lokal,
-dan mengirim output kembali ke contract. Tidak ada HTTP server atau database.
+This worker only reads the blockchain through RPC, runs the model locally, and
+sends the output back to the contract. There is no HTTP server or database.
 
 ```bash
 QUORUM_DEPLOYMENT=inference-quorum-deployment.json \
 MODEL_PATH=shards/model_reconstructed.gguf \
 PRIVATE_KEY=0xPRIVATE_KEY_WALLET_NODE_SENDIRI \
-START_BLOCK=BLOCK_SEBELUM_REQUEST \
+START_BLOCK=BLOCK_BEFORE_REQUEST \
 POLL_MS=15000 \
 MAX_TOKENS=128 \
 node node/worker_node.js
 ```
 
-Worker membaca `RequestCreated` dengan `eth_getLogs` per rentang blok. Setiap
-request yang cocok dengan model aktif dijalankan lokal, lalu output dikirim ke
-`submitOutput(requestId, output, nonce)`. Worker membaca difficulty milik request
-dari chain (bukan nilai hardcode) dan mencari nonce PoW secara lokal. Untuk model
-tier eksklusif worker mencetak peringatan bahwa nonce dapat memerlukan waktu
-sangat lama. Wallet node harus memiliki BNB opBNB untuk gas.
+The worker reads `RequestCreated` with `eth_getLogs` per block range. Every
+request matching the active model is run locally, then the output is sent to
+`submitOutput(requestId, output, nonce)`. The worker reads the request's difficulty
+from the chain (not a hardcoded value) and searches for the PoW nonce locally. For
+exclusive-tier models the worker prints a warning that the nonce may take a very
+long time. The node wallet must hold opBNB BNB for gas.
 
-### Reward dibagi rata antar kontributor
+### Reward split equally among contributors
 
-Fee request `0.0001 BNB` dibagi:
+The request fee of `0.0001 BNB` is split:
 
 ```text
-10% platform → `claim()` oleh owner
-90% miner    → dibagi rata ke semua miner yang output-nya cocok,
-               masing-masing `claimShare(requestId)`
+10% platform → `claim()` by the owner
+90% miner    → split equally among all miners whose output matches,
+               each calling `claimShare(requestId)`
 ```
 
-Miner yang mengirim output berbeda dari output pemenang tidak berhak apa pun.
-Submission ditutup segera setelah kuorum tercapai, sehingga jumlah pembagi
-mengunci di nilai `quorum`. Tidak ada sweep: reward miner yang tidak pernah di-claim
-membeku permanen di contract, sesuai desain jaringan.
+A miner that submits an output different from the winning output is not entitled to
+anything. Submission closes immediately once quorum is reached, so the number of
+dividends is locked at the `quorum` value. There is no sweep: a miner reward that is
+never claimed freezes permanently in the contract, by network design.
 
-Perintah klaim miner:
+Miner claim command:
 
 ```bash
 QUORUM_REQUEST_ID=1 node -e '
@@ -114,76 +115,77 @@ c.claimShare(process.env.QUORUM_REQUEST_ID).then((t) => t.wait().then(() => cons
 '
 ```
 
-### Difficulty per versi model
+### Difficulty per model version
 
-Nilai difficulty awalnya `16` sehingga perangkat ringan bisa ikut. Owner atau miner
-yang sudah mengirim output valid untuk versi tersebut dapat mengusulkan nilai baru
-antara `12` dan `80`:
+The initial difficulty value is `16` so light devices can participate. The owner or
+a miner that has already submitted a valid output for that version can propose a new
+value between `12` and `80`:
 
 ```solidity
 proposeDifficulty(version, difficulty)
 ```
 
-Tiga usulan unik dengan nilai sama langsung mengaktifkan difficulty tersebut; usulan
-dengan nilai berbeda tidak dapat mengubahnya. Jika dalam jendela 2 hari tidak tercapai
-tiga usulan yang sama, difficulty lama dipertahankan dan `resolveDifficulty(version)`
-menutup ronde. Nilai `≥ 50` ditandai sebagai tier eksklusif oleh
-`isExclusiveTier(version)`. Difficulty terkunci pada request saat request dibuat.
+Three unique proposals with the same value activate that difficulty immediately;
+proposals with different values cannot change it. If three matching proposals are not
+reached within the 2-day window, the old difficulty is kept and
+`resolveDifficulty(version)` closes the round. Values `≥ 50` are marked as an
+exclusive tier by `isExclusiveTier(version)`. Difficulty is locked into the request at
+the moment the request is created.
 
-### Jalur emergency (anti deadlock)
+### Emergency path (anti deadlock)
 
-Kalau consensus tiga usulan tidak pernah tercapai — misalnya semua miner yang
-pernah 제안 hilang — difficulty tidak akan bisa diubah. Jalur emergency menutup
-lubang itu:
+If the three-proposal consensus is never reached — for example if every miner that
+ever proposed disappears — difficulty could never be changed. The emergency path
+closes that hole:
 
 ```solidity
-proposeDifficultyEmergency(version, difficulty)  // owner atau miner terdaftar
-executeDifficulty(version)                      // siapa pun, setelah 7 hari
-cancelDifficultyEmergency(version)              // owner, sebelum dieksekusi
+proposeDifficultyEmergency(version, difficulty)  // owner or a registered miner
+executeDifficulty(version)                      // anyone, after 7 days
+cancelDifficultyEmergency(version)              // owner, before execution
 ```
 
 ```text
-Owner/Miner mengusulkan  →  menunggu 7 hari  →  siapa pun menjalankan
+Owner/Miner proposes  →  wait 7 days  →  anyone executes
 ```
 
-Efeknya: owner tidak dapat mengubah difficulty sendirian karena harus menunggu
-masa tunda, tetapi jaringan tidak pernah terkunci selamanya karena eksekusi tidak
-bergantung pada wallet owner. Usulan kedua saat masih pending ditolak, dan owner
-bisa membatalkan usulan yang tidak diinginkan.
+The effect: the owner cannot change difficulty alone because a delay period must
+pass, but the network can never be locked forever because execution does not depend
+on the owner's wallet. A second proposal while one is pending is rejected, and the
+owner can cancel an unwanted proposal.
 
-### Output harus deterministik agar kuorum tercapai
+### Output must be deterministic for quorum to be reached
 
-Agar output beberapa miner dianggap identik, inference harus deterministik.
-Build `llama-cli` minimal yang hanya mendukung `-m/-n/-ngl` memakai greedy
-decoding dan sudah deterministik. Jika memakai build llama.cpp lengkap dengan
-sampling acak, atur flag deterministik agar kuorum dapat tercapai:
+For several miners' outputs to be considered identical, inference must be
+deterministic. A minimal `llama-cli` build that only supports `-m/-n/-ngl` uses
+greedy decoding and is already deterministic. If you use a full llama.cpp build with
+random sampling, set the deterministic flags so quorum can be reached:
 
 ```bash
 LLAMA_TEMP=0 LLAMA_SEED=1 node node/worker_node.js
 ```
 
-Requester membuat permintaan dan mengambil hasil langsung dari blockchain:
+The requester creates a request and reads the result directly from the blockchain:
 
 ```bash
 PRIVATE_KEY=0xPRIVATE_KEY_REQUESTER_SENDIRI \
 POLL_MS=10000 \
-npm run request:inference -- "Jelaskan blockchain dalam satu kalimat"
+npm run request:inference -- "Explain blockchain in one sentence"
 ```
 
-Requester membayar gas transaksi request dan finalisasi. Prompt dan output
-tersimpan publik on-chain. Atur `INFERENCE_QUORUM` untuk jumlah output identik
-yang harus diterima; default demo adalah `1`. Jika quorum tidak tercapai sampai
-deadline, requester dapat memanggil `refundRequest(requestId)`.
+The requester pays the gas for the request and finalization transactions. Prompts
+and outputs are stored publicly on-chain. Set `INFERENCE_QUORUM` for the number of
+identical outputs that must be received; the demo default is `1`. If quorum is not
+reached by the deadline, the requester can call `refundRequest(requestId)`.
 
-### Alur dari shard Pinata
+### Flow from Pinata shards
 
-Untuk mensimulasikan node komunitas yang mengambil model dari shard publik:
+To simulate a community node fetching the model from public shards:
 
 ```bash
 python3 scripts/assemble_shards.py --refresh
 MODEL_PATH=shards/model_reconstructed.gguf \
-  npm run node:inference -- "Jelaskan blockchain dalam satu kalimat"
+  npm run node:inference -- "Explain blockchain in one sentence"
 ```
 
-Script rekonstruksi memverifikasi hash setiap shard dan hash file GGUF akhir
-sebelum inference dijalankan.
+The reconstruction script verifies the hash of every shard and the final GGUF file
+hash before inference is run.
