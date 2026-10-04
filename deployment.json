@@ -1,0 +1,8 @@
+{
+  "network": "opbnb",
+  "chainId": 204,
+  "contractAddress": "0x8D34729c9802F388b88e18f34B23EEb8fA9B859b",
+  "shardUnlockedTopic": "0xd98f6dbf63d8392d304aa06350e29459c70bbc462bc171ceeff81adc76b423f9",
+  "deployer": "0xf34BDf93b2574EBEBcE35AcCa1BbFD0482883380",
+  "deployedAt": "2026-09-28T13:17:42.519Z"
+}
