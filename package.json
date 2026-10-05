@@ -12,6 +12,8 @@
     "register:model:testnet": "hardhat run scripts/register_model.js --network bscTestnet",
     "node:inference": "node node/run_registry_inference.js",
     "request:inference": "node scripts/request_inference.js",
+    "refund:request": "node scripts/refund_request.js",
+    "dashboard:profit": "node scripts/profit_dashboard.js",
     "wallet:testnet": "hardhat run scripts/check_testnet_wallet.js --network bscTestnet",
     "add-shards": "hardhat run scripts/add_shards.js --network opbnb",
     "messages": "node scripts/read_messages.js"

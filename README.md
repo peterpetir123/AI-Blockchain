@@ -169,6 +169,25 @@ of Work difficulty is `16` and can be changed through on-chain proposals (3 uniq
 proposals with the same value activate it); values `≥ 50` are flagged as an
 exclusive tier.
 
+Paid-inference miners run `node/worker_node.js`, not the separate shard-9 demo
+miner. They receive gross BNB only when their deterministic output matches the
+winning quorum output, then call `claimShare(requestId)`. Gross reward minus
+`submitOutput` gas, `claimShare` gas, hardware, electricity, and inference costs
+is the actual net result. At the current fee, the miner pool is `0.00009 BNB`:
+one matching miner receives `0.00009`, two receive `0.000045` each, and three
+receive `0.00003` each, before gas.
+
+Requester refund and public profit history tools:
+
+```bash
+npm run refund:request -- <requestId>       # requester only, after failed quorum
+npm run dashboard:profit -- --json          # read-only event and gas history
+```
+
+See the complete requester/refund, paid-inference miner, gross-vs-gas, and
+dashboard instructions in [`node/README.md`](node/README.md). The private owner
+claim procedure is intentionally not included in the public repository.
+
 Shard `8` was already unlocked during end-to-end testing. Shard `9` is the public
 challenge currently available and still locked.
 

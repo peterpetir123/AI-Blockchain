@@ -74,7 +74,7 @@ async function main() {
 
   const requestId = event.args.requestId;
   console.log(`Request ID: ${requestId}`);
-  console.log("Menunggu kuorum...");
+  console.log("Waiting for quorum...");
 
   while (true) {
     const request = await quorumContract.requests(requestId);
@@ -94,7 +94,7 @@ async function main() {
 
   const request = await quorumContract.requests(requestId);
   const output = await quorumContract.outputText(requestId, request.winningOutput);
-  console.log(`\nOutput (request ${requestId}, ${request.winningCount} suara):\n${output}`);
+  console.log(`\nOutput (request ${requestId}, ${request.winningCount} matching submissions):\n${output}`);
   console.log(`Output hash: ${request.winningOutput}`);
 }
 

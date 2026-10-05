@@ -73,7 +73,7 @@ sends the output back to the contract. There is no HTTP server or database.
 ```bash
 QUORUM_DEPLOYMENT=inference-quorum-deployment.json \
 MODEL_PATH=shards/model_reconstructed.gguf \
-PRIVATE_KEY=0xPRIVATE_KEY_WALLET_NODE_SENDIRI \
+PRIVATE_KEY=0x_PRIVATE_KEY_NODE_WALLET \
 START_BLOCK=BLOCK_BEFORE_REQUEST \
 POLL_MS=15000 \
 MAX_TOKENS=128 \
@@ -167,7 +167,7 @@ LLAMA_TEMP=0 LLAMA_SEED=1 node node/worker_node.js
 The requester creates a request and reads the result directly from the blockchain:
 
 ```bash
-PRIVATE_KEY=0xPRIVATE_KEY_REQUESTER_SENDIRI \
+PRIVATE_KEY=0x_PRIVATE_KEY_REQUESTER \
 POLL_MS=10000 \
 npm run request:inference -- "Explain blockchain in one sentence"
 ```
@@ -176,6 +176,104 @@ The requester pays the gas for the request and finalization transactions. Prompt
 and outputs are stored publicly on-chain. Set `INFERENCE_QUORUM` for the number of
 identical outputs that must be received; the demo default is `1`. If quorum is not
 reached by the deadline, the requester can call `refundRequest(requestId)`.
+
+### Refund an expired request
+
+Only the original requester can refund a request. Refund is available after the
+deadline when quorum was not reached, and returns the request fee minus the refund
+transaction gas:
+
+```bash
+PRIVATE_KEY=0x_PRIVATE_KEY_REQUESTER \
+npm run refund:request -- 123
+```
+
+The script checks the requester address, deadline, quorum state, and refundable
+balance before sending `refundRequest(123)`.
+
+### Paid-inference miner tutorial
+
+This is different from the public shard-9 challenge in `miner/README.md`. Paid
+inference miners run the model, submit a deterministic output, and can earn BNB
+when their output matches the winning quorum output.
+
+```bash
+git clone https://github.com/peterpetir123/AI-Blockchain
+cd AI-Blockchain
+npm install
+python3 scripts/assemble_shards.py --refresh
+cd miner && npm install && npm run selftest && cd ..
+
+export RPC_URL=https://opbnb-rpc.publicnode.com
+export QUORUM_DEPLOYMENT=inference-quorum-deployment.json
+export MODEL_PATH=shards/model_reconstructed.gguf
+export PRIVATE_KEY=0x_PRIVATE_KEY_MINER
+export START_BLOCK=BLOCK_BEFORE_REQUEST
+export POLL_MS=15000
+export MAX_TOKENS=128
+export LLAMA_TEMP=0
+export LLAMA_SEED=1
+node node/worker_node.js
+```
+
+The worker watches new `RequestCreated` events. It runs the prompt locally,
+searches a request/output/address-bound PoW nonce, and submits the output. Only a
+miner whose output hash equals the winning output can claim a share after the
+request is finalized. The miner must keep enough opBNB BNB for both
+`submitOutput` and `claimShare` gas.
+
+### Gross profit versus gas
+
+At the current fee of `0.0001 BNB`:
+
+```text
+Platform gross allocation : 10% = 0.00001 BNB
+Miner pool gross allocation: 90% = 0.00009 BNB
+1 matching miner           : 0.00009 BNB gross
+2 matching miners          : 0.000045 BNB gross each
+3 matching miners          : 0.00003 BNB gross each
+```
+
+Gross reward is not net profit. A miner pays gas for `submitOutput` and
+`claimShare`, plus hardware/electricity costs. The exact net formula is:
+
+```text
+net miner result = claimed miner reward - submitOutput gas - claimShare gas
+                   - hardware/electricity/model costs
+```
+
+The contract does not reimburse gas. A miner also earns nothing if its output is
+not part of the winning quorum, and unclaimed rewards freeze permanently.
+
+### Profit history dashboard
+
+The dashboard is read-only and requires no private key. It scans public contract
+events for allocations, miner claims, platform claims, and claim transaction gas:
+
+```bash
+# Default: scan the latest 500,000 blocks
+npm run dashboard:profit
+
+# Full history: set the deployment block or another explicit range
+npm run dashboard:profit -- --from-block=190935345 --to-block=latest
+
+# Show one miner's claimed history
+npm run dashboard:profit -- \
+  --address=0x_MINER_ADDRESS \
+  --from-block=190935345
+
+# Machine-readable JSON for a dashboard or export job
+npm run dashboard:profit -- --from-block=190935345 --json
+```
+
+The dashboard reports total gross allocations, actually claimed amounts, miner
+`submitOutput` and claim gas, and net after those on-chain transaction costs. With
+`--address`, it also calculates that miner's eligible gross share by matching its
+submitted output hash against each finalized winning output; its submissions and
+claims are filtered to that wallet. It does not estimate electricity, hardware
+depreciation, failed transaction gas, or inference costs. `--to-block=latest`
+resolves to the current chain tip. Historical results are limited to the selected
+block range; use the contract deployment block as `--from-block` for full history.
 
 ### Flow from Pinata shards
 
