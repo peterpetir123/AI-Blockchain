@@ -1,4 +1,4 @@
-# AI Shard Miner
+# Quorix AI Shard Miner
 
 Searches for a nonce to unlock an AI shard on the `AIShardUnlock` contract (opBNB).
 The nonce is searched **locally**; only the final transaction is sent to the network.

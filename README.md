@@ -1,6 +1,14 @@
-# AI Shard Unlock Agent
+<p align="center">
+  <img src="assets/quorix-ai-logo.png" alt="Quorix AI logo" width="220">
+</p>
 
-Prototype of a community AI network. `AIShardUnlock` handles the narrative unlock
+<h1 align="center">Quorix AI — From Qwen</h1>
+
+<p align="center">
+  A community-owned, serverless AI inference network on opBNB.
+</p>
+
+Built around the Qwen model family, `AIShardUnlock` handles the narrative unlock
 stage, while `ModelRegistry` registers a single whole model file via CID and
 hash. The neural network runs on community nodes; the blockchain stores the model
 version and inference output hashes, not the weights or the inference itself.

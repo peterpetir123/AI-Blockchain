@@ -1,6 +1,7 @@
 {
-  "name": "ai-agent",
+  "name": "quorix-ai",
   "version": "0.1.0",
+  "description": "Quorix AI — a community-owned, serverless AI inference network on opBNB, from Qwen.",
   "private": true,
   "scripts": {
     "compile": "hardhat compile",
