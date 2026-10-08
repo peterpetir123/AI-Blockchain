@@ -46,18 +46,26 @@ There is no server, worker, or bot. The only output is an on-chain event.
 ## Structure
 
 ```
-ai-agent/
-├── contracts/AIShardUnlock.sol   # narrative unlock and message event
-├── contracts/ModelRegistry.sol   # model version + inference record
+AI-Blockchain/
+├── assets/quorix-ai-logo.png    # brand logo
+├── contracts/
+│   ├── AIShardUnlock.sol         # narrative unlock and message event
+│   ├── InferenceQuorum.sol       # paid requests, quorum, payouts, governance
+│   └── ModelRegistry.sol         # model version + inference record
 ├── test/                         # contract unit tests + miner integration
 ├── scripts/
 │   ├── deploy_contract.js        # deploy + print address & topic hash
+│   ├── deploy_model_registry.js
+│   ├── deploy_inference_quorum.js
 │   ├── add_shards.js             # register shards from manifest.json
 │   ├── add_demo_shard.js         # add one public low-difficulty challenge shard
-│   └── shard_pipeline.py         # split file -> sha256 -> IPFS -> manifest.json
+│   ├── shard_pipeline.py         # split file -> sha256 -> IPFS -> manifest.json
 │   ├── assemble_shards.py        # download Pinata CID -> verify -> merge GGUF
-├── miner/                        # public miner (share with the community)
-├── node/                         # local GGUF model runner
+│   ├── request_inference.js      # requester client (create + finalize + read)
+│   ├── refund_request.js         # requester refund after a failed quorum
+│   └── profit_dashboard.js       # read-only gross/claimed/gas history
+├── miner/                        # public shard miner (share with the community)
+├── node/                         # local GGUF model runner and paid worker
 └── hardhat.config.js
 ```
 

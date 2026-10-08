@@ -26,7 +26,7 @@ def download(cid: str, destination: Path, attempts: int = 4) -> None:
     url = GATEWAY.format(cid)
     for attempt in range(1, attempts + 1):
         try:
-            request = urllib.request.Request(url, headers={"User-Agent": "ai-agent-shard-assembler/1.0"})
+            request = urllib.request.Request(url, headers={"User-Agent": "quorix-ai-shard-assembler/1.0"})
             with urllib.request.urlopen(request, timeout=900) as response, destination.open("wb") as output:
                 while True:
                     chunk = response.read(1024 * 1024)

@@ -1,8 +1,8 @@
 {
-  "name": "ai-shard-miner",
+  "name": "quorix-ai-shard-miner",
   "version": "0.1.0",
   "private": true,
-  "bin": { "ai-shard-miner": "mine.js" },
+  "bin": { "quorix-ai-shard-miner": "mine.js" },
   "scripts": {
     "selftest": "node mine.js --selftest"
   },
