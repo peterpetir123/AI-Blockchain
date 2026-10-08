@@ -19,8 +19,8 @@ The node in this folder uses `ethers` from the root `package.json`, so the
 install happens **once at the repo root** — not inside `node/`:
 
 ```bash
-git clone https://github.com/peterpetir123/AI-Blockchain
-cd AI-Blockchain
+git clone https://github.com/peterpetir123/quorix-ai
+cd quorix-ai
 npm install
 ```
 
@@ -198,8 +198,8 @@ inference miners run the model, submit a deterministic output, and can earn BNB
 when their output matches the winning quorum output.
 
 ```bash
-git clone https://github.com/peterpetir123/AI-Blockchain
-cd AI-Blockchain
+git clone https://github.com/peterpetir123/quorix-ai
+cd quorix-ai
 npm install
 python3 scripts/assemble_shards.py --refresh
 cd miner && npm install && npm run selftest && cd ..

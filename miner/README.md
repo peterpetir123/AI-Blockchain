@@ -22,8 +22,8 @@ This demo gives no reward. A miner only finds a valid nonce and sends a single
 unlock transaction; whoever submits a valid proof first will unlock that shard.
 
 ```bash
-git clone https://github.com/peterpetir123/AI-Blockchain
-cd AI-Blockchain/miner
+git clone https://github.com/peterpetir123/quorix-ai
+cd quorix-ai/miner
 npm install
 npm run selftest
 

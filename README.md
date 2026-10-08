@@ -46,7 +46,7 @@ There is no server, worker, or bot. The only output is an on-chain event.
 ## Structure
 
 ```
-AI-Blockchain/
+quorix-ai/
 ├── assets/quorix-ai-logo.png    # brand logo
 ├── contracts/
 │   ├── AIShardUnlock.sol         # narrative unlock and message event
